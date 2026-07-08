@@ -480,7 +480,7 @@ def train_candidate_models(
 
     This function builds a full pipeline for each model:
 
-        preprocessor → model
+        preprocessor -> model
 
     The pipeline is evaluated using cross-validation, which keeps preprocessing
     leakage-safe.

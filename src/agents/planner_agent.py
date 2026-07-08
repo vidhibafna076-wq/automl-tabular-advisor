@@ -234,7 +234,7 @@ def create_experiment_plan(state: ExperimentState) -> list[dict[str, Any]]:
 
     else:
         metric_action = (
-            "Evaluate models using MAE, RMSE, and R²."
+            "Evaluate models using MAE, RMSE, and R^2."
         )
         metric_reason = (
             "Regression models should be evaluated using error-based metrics and "

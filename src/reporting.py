@@ -295,7 +295,7 @@ def _format_tool_history(tool_history: list[dict[str, Any]]) -> str:
     for index, event in enumerate(tool_history, start=1):
         lines.append(
             f"{index}. **[{event['status'].upper()}]** "
-            f"{event['tool_name']} — {event['message']}"
+            f"{event['tool_name']} - {event['message']}"
         )
 
     return "\n".join(lines)

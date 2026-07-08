@@ -600,6 +600,6 @@ def print_orchestrator_summary(orchestrator_result):
         print(
             f"- Step {item['step_number']}: "
             f"{item['selected_action']} "
-            f"({item['state_status_before']} → "
+            f"({item['state_status_before']} -> "
             f"{item.get('state_status_after', 'not run')})"
         )

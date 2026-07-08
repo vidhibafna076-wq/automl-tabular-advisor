@@ -12,7 +12,7 @@ from src.state import ExperimentState, save_state
 
 st.set_page_config(
     page_title="Agentic AutoML Advisor",
-    page_icon="🤖",
+    page_icon="ML",
     layout="wide",
 )
 
@@ -428,14 +428,14 @@ def show_timeline_tab(state: ExperimentState) -> None:
         st.dataframe(timeline_df, use_container_width=True)
 
 
-st.title("🤖 Agentic AutoML Advisor")
+st.title("Agentic AutoML Advisor")
 st.caption("A controlled agentic workflow for tabular AutoML experiments.")
 
 st.markdown(
     """
 This app runs the full AutoML advisor pipeline:
 
-**Inspect → Plan → Preprocess → Train → Compare → Critique → Report**
+**Inspect  ->  Plan  ->  Preprocess  ->  Train  ->  Compare  ->  Critique  ->  Report**
 """
 )
 
