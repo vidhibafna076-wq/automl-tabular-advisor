@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from src.reporting import (
@@ -36,11 +37,12 @@ def final_report_tool(
     """
     Approved tool for creating the final AutoML advisor report.
 
-    This tool:
-    - reads the completed experiment state
-    - creates a Markdown report
-    - saves it to outputs/reports/final_report.md
-    - stores report metadata in state
+    This tool reads the completed experiment state, creates a Markdown report,
+    saves it to disk, and stores report metadata in the experiment state.
+
+    Important audit-trail rule:
+    The completed event is added before the Markdown is rendered, so the report
+    itself includes the final_report_tool completion event in the timeline.
     """
 
     tool_name = "final_report_tool"
@@ -54,24 +56,25 @@ def final_report_tool(
     )
 
     try:
-        if state.status != "reliability_critique_completed":
+        allowed_statuses = {
+            "reliability_critique_completed",
+            "model_persistence_checked",
+        }
+
+        if state.status not in allowed_statuses:
             raise ValueError(
-                "Cannot create final report before reliability critique is completed."
+                "Cannot create final report before reliability critique or model "
+                "persistence check is completed."
             )
 
         if not state.critic_report:
             raise ValueError("No critic report found in experiment state.")
 
-        report_markdown = create_final_report_markdown(state)
-        saved_path = save_final_report(
-            markdown_text=report_markdown,
-            output_path=output_path,
-        )
+        report_path = str(Path(output_path))
 
-        report_summary = create_final_report_summary(state)
-
-        state.final_report_path = saved_path
-        state.final_report_summary = report_summary
+        # Mark the state as completed before rendering the Markdown report.
+        # This ensures the generated report includes the completion event.
+        state.final_report_path = report_path
         state.status = "final_report_created"
         state.completed_steps.append("created_final_report")
 
@@ -79,8 +82,20 @@ def final_report_tool(
             state=state,
             tool_name=tool_name,
             status="completed",
-            message=f"Final report saved to {saved_path}.",
+            message=f"Final report saved to {report_path}.",
         )
+
+        report_summary = create_final_report_summary(state)
+        state.final_report_summary = report_summary
+
+        report_markdown = create_final_report_markdown(state)
+
+        saved_path = save_final_report(
+            markdown_text=report_markdown,
+            output_path=output_path,
+        )
+
+        state.final_report_path = saved_path
 
         return {
             "success": True,

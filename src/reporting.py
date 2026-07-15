@@ -500,6 +500,16 @@ def create_final_report_markdown(state: ExperimentState) -> str:
     lines.append(_format_critic_report(state.critic_report))
     lines.append("")
 
+    lines.append("# 11. Model Artifact and Explainability")
+    lines.append("")
+    lines.append("## Model Artifact Status")
+    lines.append("")
+    lines.append(_format_model_artifact_summary(state.model_artifact_summary))
+    lines.append("")
+    lines.append("## Feature Importance")
+    lines.append("")
+    lines.append(_format_feature_importance_summary(state.feature_importance_summary))
+    lines.append("")
     lines.append("# 11. Tool Execution Timeline")
     lines.append("")
     lines.append(_format_tool_history(state.tool_history))
@@ -522,6 +532,59 @@ def create_final_report_markdown(state: ExperimentState) -> str:
         )
 
     lines.append("")
+
+    return "\n".join(lines)
+
+def _format_model_artifact_summary(summary: dict[str, Any]) -> str:
+    """
+    Format final model artifact status for the report.
+    """
+
+    if not summary:
+        return "No model artifact decision was recorded."
+
+    lines = []
+
+    lines.append(f"- **Status:** {summary.get('status')}")
+    lines.append(f"- **Reason:** {summary.get('reason')}")
+    lines.append(f"- **Critic decision:** {summary.get('critic_decision')}")
+
+    if summary.get("artifact_path"):
+        lines.append(f"- **Artifact path:** `{summary.get('artifact_path')}`")
+
+    if summary.get("metadata_path"):
+        lines.append(f"- **Metadata path:** `{summary.get('metadata_path')}`")
+
+    return "\n".join(lines)
+
+
+def _format_feature_importance_summary(summary: dict[str, Any]) -> str:
+    """
+    Format basic feature importance summary.
+    """
+
+    if not summary:
+        return "No feature importance summary was recorded."
+
+    if summary.get("status") != "available":
+        return (
+            f"Feature importance status: **{summary.get('status')}**. "
+            f"Reason: {summary.get('reason')}"
+        )
+
+    lines = []
+
+    lines.append(f"- **Importance type:** {summary.get('importance_type')}")
+    lines.append("")
+    lines.append("| Rank | Feature | Importance |")
+    lines.append("|---:|---|---:|")
+
+    for item in summary.get("top_features", []):
+        lines.append(
+            f"| {item.get('rank')} | "
+            f"{item.get('feature')} | "
+            f"{item.get('importance')} |"
+        )
 
     return "\n".join(lines)
 

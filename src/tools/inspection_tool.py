@@ -7,6 +7,7 @@ from src.data_profiler import profile_dataset
 from src.data_quality import generate_quality_report
 from src.state import ExperimentState
 from src.task_detector import detect_task_type
+from src.leakage import detect_target_leakage_warnings
 
 
 def _add_tool_event(

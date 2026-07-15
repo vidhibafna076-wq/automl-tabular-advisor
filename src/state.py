@@ -29,6 +29,7 @@ class ExperimentState:
     # Data inspection outputs
     profile: dict[str, Any] = field(default_factory=dict)
     quality_issues: list[dict[str, Any]] = field(default_factory=list)
+    leakage_warnings: list[dict[str, Any]] = field(default_factory=list)
 
     # Agent planning and execution
     approved_actions: list[str] = field(default_factory=list)
@@ -46,6 +47,8 @@ class ExperimentState:
     leaderboard: list[dict[str, Any]] = field(default_factory=list)
     comparison_summary: dict[str, Any] = field(default_factory=dict)
     critic_report: dict[str, Any] = field(default_factory=dict)
+    model_artifact_summary: dict[str, Any] = field(default_factory=dict)
+    feature_importance_summary: dict[str, Any] = field(default_factory=dict)
     final_report_path: str | None = None
     final_report_summary: dict[str, Any] = field(default_factory=dict)
 

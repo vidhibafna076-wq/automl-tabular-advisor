@@ -11,6 +11,7 @@ from src.tools.preprocessing_pipeline_tool import preprocessing_pipeline_tool
 from src.tools.preprocessing_plan_tool import preprocessing_plan_tool
 from src.tools.report_tool import final_report_tool
 from src.tools.training_tool import baseline_training_tool
+from src.tools.model_persistence_tool import model_persistence_tool
 
 
 TERMINAL_STATUSES = {
@@ -25,6 +26,7 @@ TERMINAL_STATUSES = {
     "model_comparison_failed",
     "reliability_critique_failed",
     "final_report_failed",
+    "model_persistence_failed",
 }
 
 
@@ -79,6 +81,9 @@ def _get_next_action(state: ExperimentState) -> str:
         return "run_reliability_critic"
 
     if state.status == "reliability_critique_completed":
+        return "check_model_persistence"
+
+    if state.status == "model_persistence_checked":
         return "create_final_report"
 
     if state.status in TERMINAL_STATUSES:
@@ -122,6 +127,9 @@ def _run_action(
 
     if action == "run_reliability_critic":
         return critic_agent(state)
+    
+    if action == "check_model_persistence":
+        return model_persistence_tool(state)
 
     if action == "create_final_report":
         return final_report_tool(state)
