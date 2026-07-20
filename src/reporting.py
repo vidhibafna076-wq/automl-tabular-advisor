@@ -465,6 +465,41 @@ def create_final_report_markdown(state: ExperimentState) -> str:
     lines.append(f"**Leakage control:** {training_summary.get('leakage_control')}")
     lines.append("")
 
+    lines.append("## Validation Design")
+    lines.append("")
+
+    validation_summary = state.validation_summary or {}
+
+    if validation_summary:
+        lines.append(
+            f"- **Strategy:** {validation_summary.get('strategy')}"
+        )
+        lines.append(
+            f"- **Cross-validation used:** "
+            f"{validation_summary.get('cross_validation_used')}"
+        )
+        lines.append(
+            f"- **Rows used for cross-validation:** "
+            f"{validation_summary.get('cross_validation_rows')}"
+        )
+        lines.append(
+            f"- **Final holdout used:** "
+            f"{validation_summary.get('holdout_used')}"
+        )
+        lines.append(
+            f"- **Holdout rows:** "
+            f"{validation_summary.get('holdout_rows')}"
+        )
+        lines.append(
+            f"- **Reason:** {validation_summary.get('reason')}"
+        )
+    else:
+        lines.append(
+            "No validation strategy summary was recorded."
+        )
+
+    lines.append("")
+
     unsupported_metrics = training_summary.get("unsupported_metrics_in_first_trainer", [])
 
     if unsupported_metrics:
@@ -510,12 +545,13 @@ def create_final_report_markdown(state: ExperimentState) -> str:
     lines.append("")
     lines.append(_format_feature_importance_summary(state.feature_importance_summary))
     lines.append("")
-    lines.append("# 11. Tool Execution Timeline")
+
+    lines.append("# 12. Tool Execution Timeline")
     lines.append("")
     lines.append(_format_tool_history(state.tool_history))
     lines.append("")
 
-    lines.append("# 12. Final Conclusion")
+    lines.append("# 13. Final Conclusion")
     lines.append("")
 
     if decision == "do_not_recommend_model":

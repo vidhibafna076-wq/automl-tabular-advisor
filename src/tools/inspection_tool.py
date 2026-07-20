@@ -133,6 +133,13 @@ def inspect_dataset_tool(state: ExperimentState) -> dict[str, Any]:
             task_info=task_info,
         )
 
+        leakage_warnings = detect_target_leakage_warnings(
+            df=dataset.df,
+            target_column=state.target_column,
+        )
+
+        state.leakage_warnings = leakage_warnings
+
         state.quality_issues = quality_issues
         state.status = "quality_report_completed"
         state.completed_steps.append("generated_quality_report")
@@ -141,7 +148,9 @@ def inspect_dataset_tool(state: ExperimentState) -> dict[str, Any]:
             state=state,
             tool_name=tool_name,
             status="success",
-            message=f"Generated data quality report with {len(quality_issues)} issue(s).",
+            message=
+                f"Generated data quality report with {len(quality_issues)} issue(s)."
+                f"and {len(leakage_warnings)} leakage warning(s)."
         )
 
         # Step 5: Final status for this tool

@@ -234,6 +234,50 @@ def model_persistence_tool(
                 "feature_importance_summary": state.feature_importance_summary,
                 "error": None,
             }
+        
+        validation_summary = state.validation_summary or {}
+        holdout_result = state.holdout_result or {}
+
+        if (
+            validation_summary.get("holdout_used")
+            and holdout_result.get("status") != "completed"
+        ):
+            summary = {
+                "status": "skipped",
+                "reason": (
+                    "No model was saved because a final holdout was reserved but has "
+                    "not yet been evaluated."
+                ),
+                "critic_decision": decision,
+                "artifact_path": None,
+                "metadata_path": None,
+            }
+
+            state.model_artifact_summary = summary
+            state.feature_importance_summary = {
+                "status": "skipped",
+                "reason": (
+                    "Feature importance was skipped because no final model was saved."
+                ),
+                "top_features": [],
+            }
+            state.status = "model_persistence_checked"
+            state.completed_steps.append("checked_model_persistence")
+
+            _add_tool_event(
+                state=state,
+                tool_name=tool_name,
+                status="completed",
+                message=summary["reason"],
+            )
+
+            return {
+                "success": True,
+                "state": state,
+                "model_artifact_summary": summary,
+                "feature_importance_summary": state.feature_importance_summary,
+                "error": None,
+            }
 
         if not selected_candidate:
             raise ValueError(

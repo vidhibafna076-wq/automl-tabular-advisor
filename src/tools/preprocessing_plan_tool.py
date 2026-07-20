@@ -120,10 +120,12 @@ def _choose_metric_strategy(state: ExperimentState) -> dict[str, Any]:
                 "recall",
                 "balanced_accuracy",
                 "roc_auc",
+                "pr_auc",
             ],
             "reason": (
                 "Binary classification should not be judged by accuracy alone. "
-                "F1 balances precision and recall."
+                "F1 balances precision and recall. ROC-AUC and PR-AUC help evaluate "
+                "ranking quality when probability estimates are available."
             ),
         }
 

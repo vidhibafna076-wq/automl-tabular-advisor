@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 from src.agents.critic_agent import critic_agent
 from src.agents.planner_agent import planner_agent
@@ -141,6 +141,7 @@ def run_orchestrator(
     state: ExperimentState,
     approve_drop_id_columns: bool = False,
     max_steps: int = 20,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """
     Run the controlled agentic AutoML workflow.
@@ -151,6 +152,10 @@ def run_orchestrator(
     3. Calls the relevant tool or agent
     4. Updates state
     5. Stops when complete or blocked
+
+    An optional progress callback receives factual start, completion, and
+    finish events. The Streamlit UI uses these events to report real workflow
+    progress; the command-line interface does not need to provide a callback.
     """
 
     _add_orchestrator_event(
@@ -179,13 +184,24 @@ def run_orchestrator(
                 message=f"Stopped workflow at terminal status: {state.status}.",
             )
 
-            return {
+            response = {
                 "success": True,
                 "state": state,
                 "actions_taken": actions_taken,
                 "stop_reason": state.status,
                 "error": None,
             }
+            if progress_callback:
+                progress_callback(
+                    {
+                        "phase": "finished",
+                        "step_number": step_number,
+                        "action": "stop",
+                        "success": True,
+                        "state_status": state.status,
+                    }
+                )
+            return response
 
         if next_action == "unknown":
             message = f"No orchestration rule found for state status: {state.status}"
@@ -212,6 +228,16 @@ def run_orchestrator(
             message=f"Selected next action: {next_action}.",
         )
 
+        if progress_callback:
+            progress_callback(
+                {
+                    "phase": "started",
+                    "step_number": step_number,
+                    "action": next_action,
+                    "state_status": state.status,
+                }
+            )
+
         result = _run_action(
             state=state,
             action=next_action,
@@ -222,6 +248,17 @@ def run_orchestrator(
 
         actions_taken[-1]["action_success"] = result["success"]
         actions_taken[-1]["state_status_after"] = state.status
+
+        if progress_callback:
+            progress_callback(
+                {
+                    "phase": "completed",
+                    "step_number": step_number,
+                    "action": next_action,
+                    "success": result["success"],
+                    "state_status": state.status,
+                }
+            )
 
         if not result["success"]:
             _add_orchestrator_event(

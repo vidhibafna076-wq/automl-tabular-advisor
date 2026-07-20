@@ -6,6 +6,7 @@ from src.model_registry import get_candidate_models
 from src.preprocessing import build_preprocessor, prepare_features_and_target
 from src.state import ExperimentState
 from src.training import train_candidate_models
+from src.validation import create_validation_split
 
 
 def _add_tool_event(
@@ -28,20 +29,18 @@ def _add_tool_event(
     )
 
 
-def baseline_training_tool(state: ExperimentState) -> dict[str, Any]:
+def baseline_training_tool(
+    state: ExperimentState,
+    random_state: int = 42,
+) -> dict[str, Any]:
     """
-    Approved tool for training baseline candidate models.
+    Train and evaluate baseline candidate models.
 
-    This tool:
-    - reloads the dataset
-    - prepares X and y
-    - rebuilds the preprocessor
-    - gets approved candidate models
-    - evaluates each model using cross-validation
-    - saves model results to state
+    For sufficiently large datasets, this tool first reserves a final untouched
+    holdout set. Cross-validation is then performed only on the remaining
+    training portion.
 
-    It does not tune models yet.
-    It does not select the final best model yet.
+    For small datasets, all usable rows remain available for cross-validation.
     """
 
     tool_name = "baseline_training_tool"
@@ -61,10 +60,9 @@ def baseline_training_tool(state: ExperimentState) -> dict[str, Any]:
             )
 
         if not state.preprocessing_config:
-            raise ValueError("No preprocessing configuration found.")
-
-        if not state.model_registry_summary:
-            raise ValueError("No model registry summary found.")
+            raise ValueError(
+                "No preprocessing configuration was found in the experiment state."
+            )
 
         dataset = load_dataset(
             file_path=state.dataset_path,
@@ -76,22 +74,46 @@ def baseline_training_tool(state: ExperimentState) -> dict[str, Any]:
             preprocessing_config=state.preprocessing_config,
         )
 
+        validation_split = create_validation_split(
+            X=X,
+            y=y,
+            base_task=state.base_task,
+            random_state=random_state,
+        )
+
+        state.validation_summary = validation_split.summary
+        state.holdout_result = {}
+
         preprocessor = build_preprocessor(
             preprocessing_config=state.preprocessing_config,
         )
 
         candidate_models = get_candidate_models(
             base_task=state.base_task,
+            random_state=random_state,
         )
 
         model_results, training_summary = train_candidate_models(
-            X=X,
-            y=y,
+            X=validation_split.X_train,
+            y=validation_split.y_train,
             preprocessor=preprocessor,
             candidate_models=candidate_models,
             task_type=state.task_type,
             base_task=state.base_task,
             preprocessing_config=state.preprocessing_config,
+            random_state=random_state,
+        )
+
+        training_summary["validation_strategy_summary"] = (
+            validation_split.summary
+        )
+        training_summary["rows_used_for_cross_validation"] = int(
+            len(validation_split.y_train)
+        )
+        training_summary["holdout_rows_reserved"] = (
+            int(len(validation_split.y_holdout))
+            if validation_split.y_holdout is not None
+            else 0
         )
 
         state.model_results = model_results
@@ -99,14 +121,24 @@ def baseline_training_tool(state: ExperimentState) -> dict[str, Any]:
         state.status = "baseline_training_completed"
         state.completed_steps.append("trained_baseline_models")
 
+        holdout_message = (
+            f" A final holdout of "
+            f"{validation_split.summary['holdout_rows']} row(s) was reserved."
+            if validation_split.summary["holdout_used"]
+            else " No final holdout was reserved."
+        )
+
         _add_tool_event(
             state=state,
             tool_name=tool_name,
             status="completed",
             message=(
-                f"Baseline training completed. "
+                "Baseline training completed. "
                 f"{training_summary['models_completed']} model(s) completed and "
-                f"{training_summary['models_failed']} model(s) failed."
+                f"{training_summary['models_failed']} model(s) failed. "
+                f"Cross-validation used "
+                f"{validation_split.summary['cross_validation_rows']} row(s)."
+                f"{holdout_message}"
             ),
         )
 
@@ -115,6 +147,7 @@ def baseline_training_tool(state: ExperimentState) -> dict[str, Any]:
             "state": state,
             "model_results": model_results,
             "training_summary": training_summary,
+            "validation_summary": validation_split.summary,
             "error": None,
         }
 
@@ -135,5 +168,6 @@ def baseline_training_tool(state: ExperimentState) -> dict[str, Any]:
             "state": state,
             "model_results": [],
             "training_summary": {},
+            "validation_summary": {},
             "error": str(error),
         }

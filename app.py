@@ -1,7 +1,1180 @@
+# from datetime import datetime
+# from html import escape
+# from pathlib import Path
+# from typing import Any
+# import io
+
+# import pandas as pd
+# import streamlit as st
+
+# from src.agents.orchestrator_agent import run_orchestrator
+# from src.state import ExperimentState, save_state
+
+
+# st.set_page_config(
+#     page_title="AutoML Advisor",
+#     layout="wide",
+#     initial_sidebar_state="collapsed",
+# )
+
+
+# def inject_css() -> None:
+#     """Apply a restrained workbench-style visual system."""
+
+#     st.markdown(
+#         """
+#         <style>
+#             :root {
+#                 --app-bg: #f5f7fa;
+#                 --surface: #ffffff;
+#                 --surface-muted: #f8fafc;
+#                 --text: #172033;
+#                 --muted: #667085;
+#                 --border: #d9e0e8;
+#                 --primary: #175cd3;
+#                 --primary-soft: #eff6ff;
+#                 --success: #067647;
+#                 --success-soft: #ecfdf3;
+#                 --warning: #b54708;
+#                 --warning-soft: #fffaeb;
+#                 --danger: #b42318;
+#                 --danger-soft: #fef3f2;
+#             }
+
+#             [data-testid="stAppViewContainer"] {
+#                 background: var(--app-bg);
+#             }
+
+#             [data-testid="stHeader"] {
+#                 background: rgba(245, 247, 250, 0.94);
+#             }
+
+#             .block-container {
+#                 max-width: 1440px;
+#                 padding-top: 1.15rem;
+#                 padding-bottom: 3rem;
+#             }
+
+#             h1, h2, h3, h4 {
+#                 color: var(--text);
+#                 letter-spacing: 0;
+#             }
+
+#             p, li, label, span, div {
+#                 color: var(--text);
+#             }
+
+#             .app-header {
+#                 display: flex;
+#                 align-items: center;
+#                 justify-content: space-between;
+#                 gap: 1rem;
+#                 padding: 0.35rem 0 1rem 0;
+#                 margin-bottom: 1rem;
+#                 border-bottom: 1px solid var(--border);
+#             }
+
+#             .app-header h1 {
+#                 margin: 0;
+#                 font-size: 1.65rem;
+#                 line-height: 1.2;
+#             }
+
+#             .app-header p {
+#                 margin: 0.2rem 0 0 0;
+#                 color: var(--muted);
+#                 font-size: 0.95rem;
+#             }
+
+#             .header-meta {
+#                 display: flex;
+#                 gap: 0.45rem;
+#                 flex-wrap: wrap;
+#                 justify-content: flex-end;
+#             }
+
+#             .meta-label, .tag, .severity-label {
+#                 display: inline-flex;
+#                 align-items: center;
+#                 border: 1px solid var(--border);
+#                 border-radius: 6px;
+#                 background: var(--surface-muted);
+#                 padding: 0.28rem 0.5rem;
+#                 color: #344054 !important;
+#                 font-size: 0.78rem;
+#                 font-weight: 650;
+#             }
+
+#             .section-heading {
+#                 margin: 0 0 0.75rem 0;
+#             }
+
+#             .section-heading h2 {
+#                 margin: 0;
+#                 font-size: 1.25rem;
+#             }
+
+#             .section-heading p {
+#                 margin: 0.25rem 0 0 0;
+#                 color: var(--muted);
+#                 font-size: 0.9rem;
+#             }
+
+#             div[data-testid="stVerticalBlockBorderWrapper"] {
+#                 background: var(--surface);
+#                 border-color: var(--border) !important;
+#                 border-radius: 8px !important;
+#             }
+
+#             [data-testid="stMetric"] {
+#                 background: var(--surface);
+#                 border: 1px solid var(--border);
+#                 border-radius: 8px;
+#                 padding: 0.8rem 0.9rem;
+#                 min-height: 96px;
+#             }
+
+#             [data-testid="stMetricLabel"] {
+#                 color: var(--muted);
+#             }
+
+#             [data-testid="stMetricValue"] {
+#                 font-size: 1.45rem;
+#             }
+
+#             .decision-banner {
+#                 border: 1px solid var(--border);
+#                 border-left-width: 5px;
+#                 border-radius: 8px;
+#                 padding: 1rem 1.1rem;
+#                 margin: 0.75rem 0 1rem 0;
+#                 background: var(--surface);
+#             }
+
+#             .decision-banner h2 {
+#                 margin: 0;
+#                 font-size: 1.2rem;
+#             }
+
+#             .decision-banner p {
+#                 margin: 0.35rem 0 0 0;
+#                 color: #475467;
+#             }
+
+#             .decision-banner.success {
+#                 border-color: #6ce9a6;
+#                 border-left-color: var(--success);
+#                 background: var(--success-soft);
+#             }
+
+#             .decision-banner.warning {
+#                 border-color: #fec84b;
+#                 border-left-color: var(--warning);
+#                 background: var(--warning-soft);
+#             }
+
+#             .decision-banner.danger {
+#                 border-color: #fda29b;
+#                 border-left-color: var(--danger);
+#                 background: var(--danger-soft);
+#             }
+
+#             .finding {
+#                 border: 1px solid var(--border);
+#                 border-left: 4px solid #98a2b3;
+#                 border-radius: 6px;
+#                 padding: 0.8rem 0.9rem;
+#                 margin-bottom: 0.6rem;
+#                 background: var(--surface);
+#             }
+
+#             .finding.high, .finding.critical, .finding.error {
+#                 border-left-color: var(--danger);
+#             }
+
+#             .finding.medium, .finding.warning {
+#                 border-left-color: var(--warning);
+#             }
+
+#             .finding.low, .finding.info {
+#                 border-left-color: var(--primary);
+#             }
+
+#             .finding h4 {
+#                 margin: 0 0 0.35rem 0;
+#                 font-size: 0.98rem;
+#             }
+
+#             .finding p {
+#                 margin: 0.2rem 0;
+#                 color: #475467;
+#                 font-size: 0.9rem;
+#                 line-height: 1.45;
+#             }
+
+#             .tag-row {
+#                 display: flex;
+#                 flex-wrap: wrap;
+#                 gap: 0.35rem;
+#                 margin: 0.35rem 0 0.8rem 0;
+#             }
+
+#             .empty-preview {
+#                 min-height: 310px;
+#                 display: flex;
+#                 align-items: center;
+#                 justify-content: center;
+#                 text-align: center;
+#                 color: var(--muted);
+#                 border: 1px dashed #b8c2cf;
+#                 border-radius: 8px;
+#                 background: var(--surface-muted);
+#                 padding: 2rem;
+#             }
+
+#             .stButton > button,
+#             .stDownloadButton > button {
+#                 border-radius: 6px;
+#                 font-weight: 700;
+#                 min-height: 2.55rem;
+#             }
+
+#             div[data-testid="stFileUploader"] section {
+#                 border-color: #98a2b3 !important;
+#                 border-radius: 8px !important;
+#                 background: var(--surface-muted) !important;
+#             }
+
+#             [data-testid="stDataFrame"] {
+#                 border: 1px solid var(--border);
+#                 border-radius: 6px;
+#                 overflow: hidden;
+#             }
+
+#             button[data-baseweb="tab"] {
+#                 font-weight: 650;
+#             }
+
+#             @media (max-width: 760px) {
+#                 .app-header {
+#                     align-items: flex-start;
+#                     flex-direction: column;
+#                 }
+
+#                 .header-meta {
+#                     justify-content: flex-start;
+#                 }
+
+#                 [data-testid="stMetric"] {
+#                     min-height: 82px;
+#                 }
+#             }
+#         </style>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+
+
+# def _safe_text(value: Any, fallback: str = "N/A") -> str:
+#     if value is None or value == "":
+#         return escape(fallback)
+#     return escape(str(value))
+
+
+# def _format_metric(value: Any) -> float | None:
+#     if value is None:
+#         return None
+
+#     try:
+#         return round(float(value), 4)
+#     except (TypeError, ValueError):
+#         return None
+
+
+# def _display_value(value: Any, fallback: str = "N/A") -> str:
+#     formatted = _format_metric(value)
+#     return str(formatted) if formatted is not None else str(value or fallback)
+
+
+# def _safe_filename(filename: str) -> str:
+#     allowed = [char if char.isalnum() or char in ".-_" else "_" for char in filename]
+#     return "".join(allowed) or "dataset.csv"
+
+
+# def _save_uploaded_file(uploaded_file: Any) -> str:
+#     raw_dir = Path("data/raw")
+#     raw_dir.mkdir(parents=True, exist_ok=True)
+#     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+#     output_path = raw_dir / f"{timestamp}_{_safe_filename(uploaded_file.name)}"
+#     output_path.write_bytes(uploaded_file.getvalue())
+#     return str(output_path)
+
+
+# def safe_container_with_border():
+#     try:
+#         return st.container(border=True)
+#     except TypeError:
+#         return st.container()
+
+
+# def render_header() -> None:
+#     st.markdown(
+#         """
+#         <div class="app-header">
+#             <div>
+#                 <h1>AutoML Advisor</h1>
+#                 <p>Inspect tabular data, test defensible baselines, and decide whether the evidence is trustworthy.</p>
+#             </div>
+#             <div class="header-meta">
+#                 <span class="meta-label">Tabular CSV</span>
+#                 <span class="meta-label">Classification</span>
+#                 <span class="meta-label">Regression</span>
+#             </div>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+
+
+# def render_section_title(title: str, subtitle: str | None = None) -> None:
+#     subtitle_html = f"<p>{_safe_text(subtitle)}</p>" if subtitle else ""
+#     st.markdown(
+#         f"""
+#         <div class="section-heading">
+#             <h2>{_safe_text(title)}</h2>
+#             {subtitle_html}
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+
+
+# def display_tags(
+#     values: list[Any],
+#     empty_message: str = "None detected.",
+#     max_items: int = 24,
+# ) -> None:
+#     if not values:
+#         st.caption(empty_message)
+#         return
+
+#     shown = values[:max_items]
+#     tags = "".join(f'<span class="tag">{_safe_text(value)}</span>' for value in shown)
+#     hidden_count = len(values) - len(shown)
+
+#     if hidden_count > 0:
+#         tags += f'<span class="tag">+{hidden_count} more</span>'
+
+#     st.markdown(f'<div class="tag-row">{tags}</div>', unsafe_allow_html=True)
+
+
+# def render_finding(finding: dict[str, Any], evidence_key: str) -> None:
+#     severity = str(finding.get("severity", "info")).lower()
+#     st.markdown(
+#         f"""
+#         <div class="finding {escape(severity)}">
+#             <h4><span class="severity-label">{_safe_text(severity.upper())}</span>
+#                 {_safe_text(finding.get("issue", "Finding"))}</h4>
+#             <p><strong>{_safe_text(evidence_key.replace('_', ' ').title())}:</strong>
+#                 {_safe_text(finding.get(evidence_key, "Not available"))}</p>
+#             <p><strong>Recommendation:</strong>
+#                 {_safe_text(finding.get("recommendation", "Not available"))}</p>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+
+
+# def make_quality_dataframe(quality_issues: list[dict[str, Any]]) -> pd.DataFrame:
+#     return pd.DataFrame(
+#         [
+#             {
+#                 "Severity": issue.get("severity"),
+#                 "Issue": issue.get("issue"),
+#                 "Finding": issue.get("finding"),
+#                 "Recommendation": issue.get("recommendation"),
+#             }
+#             for issue in quality_issues
+#         ]
+#     )
+
+
+# def make_leaderboard_dataframe(leaderboard: list[dict[str, Any]]) -> pd.DataFrame:
+#     rows = []
+
+#     for item in leaderboard:
+#         improvement = item.get("improvement_over_dummy", {}) or {}
+#         rows.append(
+#             {
+#                 "Rank": item.get("rank"),
+#                 "Model": item.get("display_name"),
+#                 "Family": item.get("family"),
+#                 "Metric": item.get("primary_metric"),
+#                 "CV Score": _format_metric(item.get("primary_score")),
+#                 "CV Std": _format_metric(item.get("primary_cv_std")),
+#                 "Train Score": _format_metric(item.get("primary_train_score")),
+#                 "Dummy Score": _format_metric(item.get("dummy_baseline_score")),
+#                 "Improvement": _format_metric(improvement.get("raw_improvement")),
+#                 "Beats Dummy": improvement.get("beats_dummy"),
+#                 "Reliability": item.get("reliability_level"),
+#             }
+#         )
+
+#     return pd.DataFrame(rows)
+
+
+# def make_training_metrics_dataframe(model_results: list[dict[str, Any]]) -> pd.DataFrame:
+#     rows = []
+
+#     for result in model_results:
+#         for metric_name, values in result.get("metrics", {}).items():
+#             rows.append(
+#                 {
+#                     "Model": result.get("display_name"),
+#                     "Metric": metric_name,
+#                     "CV Mean": _format_metric(values.get("cv_mean")),
+#                     "CV Std": _format_metric(values.get("cv_std")),
+#                     "Train Mean": _format_metric(values.get("train_mean")),
+#                 }
+#             )
+
+#     return pd.DataFrame(rows)
+
+
+# def make_timeline_dataframe(tool_history: list[dict[str, Any]]) -> pd.DataFrame:
+#     return pd.DataFrame(
+#         [
+#             {
+#                 "Timestamp": event.get("timestamp"),
+#                 "Agent / Tool": event.get("tool_name"),
+#                 "Status": event.get("status"),
+#                 "Message": event.get("message"),
+#             }
+#             for event in tool_history
+#         ]
+#     )
+
+
+# def load_sample_dataset() -> tuple[str | None, pd.DataFrame | None, str | None]:
+#     sample_path = Path("data/sample/loan_sample.csv")
+
+#     try:
+#         return str(sample_path), pd.read_csv(sample_path), None
+#     except Exception as error:
+#         return None, None, f"Could not load sample dataset: {error}"
+
+
+# def load_uploaded_dataset(uploaded_file: Any) -> tuple[pd.DataFrame | None, str | None]:
+#     if uploaded_file is None:
+#         return None, None
+
+#     try:
+#         return pd.read_csv(io.BytesIO(uploaded_file.getvalue())), None
+#     except Exception as error:
+#         return None, f"Could not read uploaded CSV: {error}"
+
+
+# def show_sidebar_help() -> None:
+#     with st.sidebar:
+#         st.markdown("## AutoML Advisor")
+#         st.caption("A controlled baseline modelling workflow for tabular CSV datasets.")
+
+#         st.markdown("### Workflow")
+#         st.markdown(
+#             """
+#             1. Inspect the dataset
+#             2. Plan preprocessing and validation
+#             3. Train baseline models
+#             4. Compare with a dummy baseline
+#             5. Critique reliability
+#             6. Generate a report
+#             """
+#         )
+
+#         st.markdown("### Current scope")
+#         st.markdown(
+#             """
+#             - CSV files only
+#             - Classification and regression
+#             - Baseline modelling, not production deployment
+#             - Recommendations may be withheld when evidence is weak
+#             """
+#         )
+
+
+# def show_setup_workbench() -> tuple[
+#     pd.DataFrame | None,
+#     str | None,
+#     Any,
+#     str | None,
+#     str | None,
+#     bool,
+#     bool,
+# ]:
+#     render_section_title(
+#         "New experiment",
+#         "Choose a dataset and prediction target. The preview updates before anything is trained.",
+#     )
+
+#     setup_col, preview_col = st.columns([0.36, 0.64], gap="large")
+#     uploaded_file = None
+#     dataset_path_for_run = None
+#     df_preview = None
+#     error = None
+
+#     with setup_col:
+#         with safe_container_with_border():
+#             st.markdown("### Experiment setup")
+
+#             dataset_mode = st.radio(
+#                 "Dataset source",
+#                 options=["Upload CSV", "Use sample dataset"],
+#                 horizontal=True,
+#                 key="dataset_source",
+#             )
+
+#             if dataset_mode == "Use sample dataset":
+#                 dataset_path_for_run, df_preview, error = load_sample_dataset()
+#             else:
+#                 uploaded_file = st.file_uploader(
+#                     "CSV file",
+#                     type=["csv"],
+#                     help="Upload a structured CSV file with one column selected as the target.",
+#                 )
+#                 df_preview, error = load_uploaded_dataset(uploaded_file)
+
+#             if error:
+#                 st.error(error)
+
+#             target_column = None
+#             user_objective = None
+#             approve_drop_id_columns = True
+
+#             if df_preview is not None:
+#                 target_options = list(df_preview.columns)
+#                 default_index = None
+
+#                 if dataset_mode == "Use sample dataset" and "Loan_Status" in target_options:
+#                     default_index = target_options.index("Loan_Status")
+
+#                 target_column = st.selectbox(
+#                     "Prediction target",
+#                     options=target_options,
+#                     index=default_index,
+#                     placeholder="Select the column to predict",
+#                 )
+
+#                 objective_default = (
+#                     "Predict whether a loan application will be approved"
+#                     if dataset_mode == "Use sample dataset"
+#                     else ""
+#                 )
+#                 objective_key = (
+#                     "sample_objective"
+#                     if dataset_mode == "Use sample dataset"
+#                     else "upload_objective"
+#                 )
+
+#                 user_objective = st.text_area(
+#                     "Experiment objective",
+#                     value=objective_default,
+#                     placeholder="Example: Predict which customers are likely to churn",
+#                     key=objective_key,
+#                 )
+
+#                 with st.expander("Advanced options", expanded=False):
+#                     approve_drop_id_columns = st.checkbox(
+#                         "Drop likely identifier columns",
+#                         value=True,
+#                         help="Columns such as Customer_ID usually do not generalise to new records.",
+#                     )
+
+#             run_button = st.button(
+#                 "Run analysis",
+#                 type="primary",
+#                 use_container_width=True,
+#                 disabled=df_preview is None or target_column is None,
+#             )
+
+#             st.caption("No model is saved unless the reliability critic approves it.")
+
+#     with preview_col:
+#         with safe_container_with_border():
+#             st.markdown("### Dataset preview")
+
+#             if df_preview is None:
+#                 st.markdown(
+#                     """
+#                     <div class="empty-preview">
+#                         Upload a CSV to inspect its shape, missing values, columns, and sample records.
+#                     </div>
+#                     """,
+#                     unsafe_allow_html=True,
+#                 )
+#             else:
+#                 metric_cols = st.columns(4)
+#                 metric_cols[0].metric("Rows", f"{len(df_preview):,}")
+#                 metric_cols[1].metric("Columns", f"{len(df_preview.columns):,}")
+#                 metric_cols[2].metric("Missing cells", f"{int(df_preview.isna().sum().sum()):,}")
+#                 metric_cols[3].metric(
+#                     "Numeric columns",
+#                     f"{df_preview.select_dtypes(include='number').shape[1]:,}",
+#                 )
+
+#                 st.dataframe(
+#                     df_preview.head(20),
+#                     use_container_width=True,
+#                     hide_index=True,
+#                     height=330,
+#                 )
+
+#                 if target_column:
+#                     st.caption(
+#                         f"Selected target: {target_column} | "
+#                         f"{df_preview[target_column].nunique(dropna=True)} unique values | "
+#                         f"{int(df_preview[target_column].isna().sum())} missing"
+#                     )
+
+#     return (
+#         df_preview,
+#         dataset_path_for_run,
+#         uploaded_file,
+#         target_column,
+#         user_objective,
+#         approve_drop_id_columns,
+#         run_button,
+#     )
+
+
+# def _decision_content(
+#     state: ExperimentState,
+#     orchestrator_result: dict[str, Any],
+# ) -> tuple[str, str, str]:
+#     if state.status == "preprocessing_config_created_with_pending_approvals":
+#         return (
+#             "warning",
+#             "Action required before training",
+#             "The workflow paused because one or more preprocessing decisions need approval.",
+#         )
+
+#     if not orchestrator_result.get("success", False):
+#         return (
+#             "danger",
+#             "The run did not complete",
+#             str(orchestrator_result.get("error") or "Review the run details and try again."),
+#         )
+
+#     critic_report = state.critic_report or {}
+#     decision = critic_report.get("recommendation_decision")
+#     reliability = critic_report.get("overall_reliability", "unknown")
+
+#     if decision == "do_not_recommend_model":
+#         return (
+#             "danger",
+#             "Model recommendation withheld",
+#             f"Reliability is {reliability}. The current evidence is not strong enough to select or save a model.",
+#         )
+
+#     if decision == "recommend_with_caution":
+#         return (
+#             "warning",
+#             "Candidate found, further validation required",
+#             f"Reliability is {reliability}. Treat the selected model as provisional rather than deployable.",
+#         )
+
+#     if decision == "recommend_candidate_model":
+#         selected = critic_report.get("selected_candidate", {}) or {}
+#         return (
+#             "success",
+#             "Candidate model recommended",
+#             f"The critic approved {selected.get('display_name', 'the selected candidate')} with {reliability} reliability.",
+#         )
+
+#     return (
+#         "warning",
+#         "Run completed without a final model decision",
+#         "Review the workflow status and reliability details before continuing.",
+#     )
+
+
+# def render_decision_banner(
+#     state: ExperimentState,
+#     orchestrator_result: dict[str, Any],
+# ) -> None:
+#     tone, title, message = _decision_content(state, orchestrator_result)
+#     st.markdown(
+#         f"""
+#         <div class="decision-banner {tone}">
+#             <h2>{_safe_text(title)}</h2>
+#             <p>{_safe_text(message)}</p>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+
+
+# def _best_leaderboard_item(state: ExperimentState) -> dict[str, Any] | None:
+#     best_useful_id = (state.comparison_summary or {}).get("best_useful_model_id")
+
+#     if best_useful_id:
+#         return next(
+#             (item for item in state.leaderboard if item.get("model_id") == best_useful_id),
+#             None,
+#         )
+
+#     return state.leaderboard[0] if state.leaderboard else None
+
+
+# def show_status_metrics(state: ExperimentState) -> None:
+#     critic_report = state.critic_report or {}
+#     training_summary = state.training_summary or {}
+#     comparison_summary = state.comparison_summary or {}
+#     best_model = comparison_summary.get("best_useful_display_name") or "None"
+
+#     cols = st.columns(4)
+#     cols[0].metric("Task", str(state.task_type or "N/A").replace("_", " ").title())
+#     cols[1].metric("Reliability", str(critic_report.get("overall_reliability", "N/A")).title())
+#     cols[2].metric("Models completed", training_summary.get("models_completed", 0))
+#     cols[3].metric("Best useful model", best_model)
+
+
+# def show_leaderboard_chart(state: ExperimentState) -> None:
+#     chart_rows = []
+
+#     for item in state.leaderboard:
+#         score = _format_metric(item.get("primary_score"))
+#         dummy_score = _format_metric(item.get("dummy_baseline_score"))
+
+#         if score is None:
+#             continue
+
+#         chart_rows.append(
+#             {
+#                 "Model": item.get("display_name"),
+#                 "Model score": score,
+#                 "Dummy baseline": dummy_score,
+#             }
+#         )
+
+#     if not chart_rows:
+#         st.info("No model scores are available to chart.")
+#         return
+
+#     chart_df = pd.DataFrame(chart_rows).set_index("Model")
+#     st.bar_chart(chart_df, horizontal=True, use_container_width=True)
+#     st.caption("The grey comparison series repeats the dummy score so each model can be judged against the same baseline.")
+
+
+# def show_overview_tab(state: ExperimentState) -> None:
+#     render_section_title(
+#         "Run overview",
+#         "The decision, performance evidence, and most important next actions.",
+#     )
+
+#     best_item = _best_leaderboard_item(state)
+#     comparison = state.comparison_summary or {}
+#     overview_cols = st.columns(4)
+#     overview_cols[0].metric("Primary metric", comparison.get("primary_metric", "N/A"))
+#     overview_cols[1].metric(
+#         "Candidate score",
+#         _display_value(best_item.get("primary_score") if best_item else None),
+#     )
+#     overview_cols[2].metric(
+#         "Dummy score",
+#         _display_value(comparison.get("dummy_baseline_score")),
+#     )
+#     overview_cols[3].metric(
+#         "CV variation",
+#         _display_value(best_item.get("primary_cv_std") if best_item else None),
+#     )
+
+#     chart_col, action_col = st.columns([0.62, 0.38], gap="large")
+
+#     with chart_col:
+#         st.markdown("### Model comparison")
+#         show_leaderboard_chart(state)
+
+#     with action_col:
+#         st.markdown("### Recommended next actions")
+#         next_actions = (state.critic_report or {}).get("next_actions", [])
+
+#         if not next_actions:
+#             st.info("No next actions were recorded.")
+#         else:
+#             for index, action in enumerate(next_actions, start=1):
+#                 st.markdown(f"**{index}.** {action}")
+
+#     high_priority = [
+#         issue
+#         for issue in state.quality_issues
+#         if str(issue.get("severity", "")).lower() in {"high", "critical"}
+#     ]
+
+#     if high_priority:
+#         st.markdown("### High-priority data concerns")
+#         for issue in high_priority[:3]:
+#             render_finding(issue, "finding")
+
+
+# def show_data_tab(state: ExperimentState) -> None:
+#     profile = state.profile or {}
+#     config = state.preprocessing_config or {}
+
+#     render_section_title(
+#         "Data and preprocessing",
+#         "What the advisor detected and how those columns were prepared for modelling.",
+#     )
+
+#     cols = st.columns(4)
+#     cols[0].metric("Rows", profile.get("rows", "N/A"))
+#     cols[1].metric("Columns", profile.get("columns", "N/A"))
+#     cols[2].metric("Features", profile.get("feature_count", "N/A"))
+#     cols[3].metric("Duplicate rows", profile.get("duplicate_rows", 0))
+
+#     feature_col, prep_col = st.columns(2, gap="large")
+
+#     with feature_col:
+#         with safe_container_with_border():
+#             st.markdown("### Detected columns")
+#             st.markdown("**Numerical features**")
+#             display_tags(profile.get("numerical_columns", []), "No numerical features detected.")
+#             st.markdown("**Categorical features**")
+#             display_tags(profile.get("categorical_columns", []), "No categorical features detected.")
+#             st.markdown("**Possible identifiers**")
+#             display_tags(profile.get("possible_id_columns", []), "No likely identifiers detected.")
+#             st.markdown("**Possible date columns**")
+#             display_tags(profile.get("possible_date_columns", []), "No date-like columns detected.")
+
+#     with prep_col:
+#         with safe_container_with_border():
+#             st.markdown("### Preprocessing decisions")
+#             st.markdown("**Dropped columns**")
+#             display_tags(config.get("columns_to_drop", []), "No columns were dropped.")
+
+#             missing_strategy = config.get("missing_value_strategy", {})
+#             numerical_strategy = missing_strategy.get("numerical", {}).get("strategy", "N/A")
+#             categorical_strategy = missing_strategy.get("categorical", {}).get("strategy", "N/A")
+#             validation = config.get("validation_strategy", {})
+#             metrics = config.get("metric_strategy", {})
+
+#             st.markdown(f"**Numerical missing values:** {numerical_strategy} imputation")
+#             st.markdown(f"**Categorical missing values:** {categorical_strategy} imputation")
+#             st.markdown(f"**Validation:** {validation.get('method', 'N/A')}")
+#             st.markdown(f"**Primary metric:** {metrics.get('primary_metric', 'N/A')}")
+
+#             approvals = config.get("pending_approvals", [])
+#             if approvals:
+#                 st.warning(f"{len(approvals)} preprocessing approval(s) are still pending.")
+#             else:
+#                 st.success("No preprocessing approvals are pending.")
+
+#     st.markdown("### Data quality findings")
+#     quality_issues = state.quality_issues or []
+
+#     if not quality_issues:
+#         st.success("No data quality findings were recorded.")
+#     else:
+#         for issue in quality_issues[:6]:
+#             render_finding(issue, "finding")
+
+#         if len(quality_issues) > 6:
+#             with st.expander("View all data quality findings"):
+#                 st.dataframe(
+#                     make_quality_dataframe(quality_issues),
+#                     use_container_width=True,
+#                     hide_index=True,
+#                 )
+
+#     leakage_warnings = state.leakage_warnings or []
+#     if leakage_warnings:
+#         st.markdown("### Leakage warnings")
+#         for warning in leakage_warnings:
+#             render_finding(warning, "finding")
+
+#     with st.expander("Technical preprocessing configuration", expanded=False):
+#         st.json(config)
+
+
+# def show_models_tab(state: ExperimentState) -> None:
+#     render_section_title(
+#         "Model evaluation",
+#         "Cross-validation results, dummy-baseline comparison, and model-level diagnostics.",
+#     )
+
+#     leaderboard_df = make_leaderboard_dataframe(state.leaderboard)
+
+#     if leaderboard_df.empty:
+#         st.info("No leaderboard is available.")
+#         return
+
+#     show_leaderboard_chart(state)
+
+#     st.markdown("### Leaderboard")
+#     st.dataframe(leaderboard_df, use_container_width=True, hide_index=True)
+
+#     with st.expander("All training metrics", expanded=False):
+#         metrics_df = make_training_metrics_dataframe(state.model_results)
+#         if metrics_df.empty:
+#             st.info("No training metrics are available.")
+#         else:
+#             st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+
+#     st.markdown("### Model diagnostics")
+
+#     for result in state.model_results:
+#         model_name = result.get("display_name", "Model")
+#         primary_score = _display_value(result.get("primary_score"))
+
+#         with st.expander(f"{model_name} | primary score: {primary_score}", expanded=False):
+#             summary_cols = st.columns(4)
+#             summary_cols[0].metric("Status", str(result.get("status", "N/A")).title())
+#             summary_cols[1].metric("Family", result.get("family", "N/A"))
+#             summary_cols[2].metric("Primary metric", result.get("primary_metric", "N/A"))
+#             summary_cols[3].metric("Primary score", primary_score)
+
+#             if result.get("error"):
+#                 st.error(result["error"])
+
+#             diagnostics = result.get("classification_diagnostics", {}) or {}
+#             if not diagnostics:
+#                 st.caption("No classification diagnostics are available for this model.")
+#                 continue
+
+#             diagnostic_cols = st.columns(3)
+#             diagnostic_cols[0].metric("Positive label", diagnostics.get("positive_label", "N/A"))
+#             diagnostic_cols[1].metric(
+#                 "OOF ROC-AUC",
+#                 _display_value(diagnostics.get("out_of_fold_roc_auc")),
+#             )
+#             diagnostic_cols[2].metric(
+#                 "OOF PR-AUC",
+#                 _display_value(diagnostics.get("out_of_fold_pr_auc")),
+#             )
+
+#             matrix = diagnostics.get("confusion_matrix", [])
+#             labels = diagnostics.get("labels", [])
+
+#             if matrix:
+#                 matrix_df = pd.DataFrame(
+#                     matrix,
+#                     index=[f"Actual {label}" for label in labels],
+#                     columns=[f"Predicted {label}" for label in labels],
+#                 )
+#                 st.markdown("#### Confusion matrix")
+#                 st.dataframe(
+#                     matrix_df.style.background_gradient(cmap="Blues"),
+#                     use_container_width=True,
+#                 )
+
+#             class_metrics = diagnostics.get("class_level_metrics", {})
+#             if class_metrics:
+#                 st.markdown("#### Class-level metrics")
+#                 st.dataframe(
+#                     pd.DataFrame.from_dict(class_metrics, orient="index"),
+#                     use_container_width=True,
+#                 )
+
+
+# def show_reliability_tab(
+#     state: ExperimentState,
+#     orchestrator_result: dict[str, Any],
+# ) -> None:
+#     render_section_title(
+#         "Reliability review",
+#         "Why the advisor accepted, cautioned against, or rejected the current model evidence.",
+#     )
+
+#     critic_report = state.critic_report or {}
+
+#     if not critic_report:
+#         st.info("The workflow did not produce a critic report.")
+#     else:
+#         cols = st.columns(3)
+#         cols[0].metric("Overall reliability", critic_report.get("overall_reliability", "N/A"))
+#         cols[1].metric("Decision", critic_report.get("recommendation_decision", "N/A"))
+#         cols[2].metric("Can proceed to tuning", critic_report.get("can_proceed_to_tuning", "N/A"))
+
+#         st.markdown("### Critic findings")
+#         findings = critic_report.get("findings", [])
+
+#         if not findings:
+#             st.success("No critic findings were recorded.")
+#         else:
+#             for finding in findings:
+#                 render_finding(finding, "evidence")
+
+#         st.markdown("### Next actions")
+#         next_actions = critic_report.get("next_actions", [])
+#         for index, action in enumerate(next_actions, start=1):
+#             st.markdown(f"**{index}.** {action}")
+
+#     with st.expander("Run details and execution timeline", expanded=False):
+#         stop_reason = orchestrator_result.get("stop_reason", "N/A")
+#         st.markdown(f"**Final workflow status:** `{state.status}`")
+#         st.markdown(f"**Stop reason:** `{stop_reason}`")
+
+#         actions = orchestrator_result.get("actions_taken", [])
+#         if actions:
+#             st.markdown("#### Orchestrator actions")
+#             st.dataframe(pd.DataFrame(actions), use_container_width=True, hide_index=True)
+
+#         timeline_df = make_timeline_dataframe(state.tool_history)
+#         if not timeline_df.empty:
+#             st.markdown("#### Tool timeline")
+#             st.dataframe(timeline_df, use_container_width=True, hide_index=True)
+
+
+# def show_report_tab(state: ExperimentState) -> None:
+#     render_section_title(
+#         "Final report",
+#         "Download the experiment record or inspect the generated Markdown report.",
+#     )
+
+#     if not state.final_report_path:
+#         st.info("No final report was created for this run.")
+#         return
+
+#     path = Path(state.final_report_path)
+#     if not path.exists():
+#         st.warning(f"The report was recorded but could not be found at {state.final_report_path}.")
+#         return
+
+#     report_text = path.read_text(encoding="utf-8")
+#     st.download_button(
+#         "Download report",
+#         data=report_text,
+#         file_name="automl_advisor_report.md",
+#         mime="text/markdown",
+#         type="primary",
+#     )
+
+#     with st.expander("Preview report", expanded=False):
+#         st.markdown(report_text)
+
+
+# def show_results_dashboard(
+#     state: ExperimentState,
+#     orchestrator_result: dict[str, Any],
+# ) -> None:
+#     st.divider()
+#     render_section_title(
+#         "Experiment result",
+#         "Start with the recommendation, then inspect the supporting evidence.",
+#     )
+#     render_decision_banner(state, orchestrator_result)
+#     show_status_metrics(state)
+
+#     tabs = st.tabs(["Overview", "Data", "Models", "Reliability", "Report"])
+
+#     with tabs[0]:
+#         show_overview_tab(state)
+
+#     with tabs[1]:
+#         show_data_tab(state)
+
+#     with tabs[2]:
+#         show_models_tab(state)
+
+#     with tabs[3]:
+#         show_reliability_tab(state, orchestrator_result)
+
+#     with tabs[4]:
+#         show_report_tab(state)
+
+
+# def _show_run_message(state: ExperimentState, orchestrator_result: dict[str, Any]) -> None:
+#     if not orchestrator_result.get("success", False):
+#         st.error(f"Workflow failed: {orchestrator_result.get('error') or state.status}")
+#     elif state.status == "preprocessing_config_created_with_pending_approvals":
+#         st.warning("Workflow paused because preprocessing approval is required.")
+#     elif state.status == "final_report_created":
+#         st.success("Analysis completed. Review the recommendation and supporting evidence below.")
+#     else:
+#         st.info(f"Workflow stopped with status: {state.status}")
+
+
+# def main() -> None:
+#     inject_css()
+#     show_sidebar_help()
+#     render_header()
+
+#     (
+#         df_preview,
+#         dataset_path_for_run,
+#         uploaded_file,
+#         target_column,
+#         user_objective,
+#         approve_drop_id_columns,
+#         run_button,
+#     ) = show_setup_workbench()
+
+#     if run_button:
+#         if df_preview is None or target_column is None:
+#             st.error("Load a dataset and select a target before running the advisor.")
+#             return
+
+#         run_status = st.status("Running the controlled AutoML workflow...", expanded=True)
+#         run_status.write("Inspecting the dataset and building an experiment plan.")
+
+#         try:
+#             final_dataset_path = (
+#                 dataset_path_for_run
+#                 if dataset_path_for_run
+#                 else _save_uploaded_file(uploaded_file)
+#             )
+
+#             state = ExperimentState(
+#                 dataset_path=final_dataset_path,
+#                 target_column=target_column,
+#                 user_objective=user_objective,
+#             )
+#             state.completed_steps.append("created_experiment_state")
+
+#             orchestrator_result = run_orchestrator(
+#                 state=state,
+#                 approve_drop_id_columns=approve_drop_id_columns,
+#             )
+#             state = orchestrator_result["state"]
+#             save_state(state, "outputs/reports/experiment_state.json")
+
+#             for action in orchestrator_result.get("actions_taken", []):
+#                 selected_action = str(action.get("selected_action", "step")).replace("_", " ")
+#                 action_success = action.get("action_success")
+#                 if action_success is not None:
+#                     run_status.write(
+#                         f"{selected_action.title()}: "
+#                         f"{'completed' if action_success else 'failed'}"
+#                     )
+
+#             if state.status == "final_report_created":
+#                 run_status.update(label="Analysis completed", state="complete", expanded=False)
+#             elif state.status == "preprocessing_config_created_with_pending_approvals":
+#                 run_status.update(label="Analysis paused for approval", state="error", expanded=True)
+#             else:
+#                 run_status.update(label="Analysis stopped", state="error", expanded=True)
+
+#             st.session_state["last_state"] = state
+#             st.session_state["last_orchestrator_result"] = orchestrator_result
+#             _show_run_message(state, orchestrator_result)
+
+#         except Exception as error:
+#             run_status.update(label="Analysis failed", state="error", expanded=True)
+#             st.error(f"Workflow failed: {error}")
+
+#     if "last_state" in st.session_state:
+#         show_results_dashboard(
+#             st.session_state["last_state"],
+#             st.session_state["last_orchestrator_result"],
+#         )
+
+
+# if __name__ == "__main__":
+#     main()
+
 from datetime import datetime
+from html import escape
 from pathlib import Path
 from typing import Any
-from html import escape
 import io
 
 import pandas as pd
@@ -13,417 +1186,288 @@ from src.state import ExperimentState, save_state
 
 st.set_page_config(
     page_title="Agentic AutoML Advisor",
-    page_icon="🤖",
+    page_icon="⚙️",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 
-# -----------------------------------------------------------------------------
-# CSS / VISUAL DESIGN
-# -----------------------------------------------------------------------------
+WORKFLOW_STEPS: list[tuple[str, str]] = [
+    ("Inspect", "profiled_dataset"),
+    ("Plan", "created_experiment_plan"),
+    ("Prepare", "created_preprocessing_config"),
+    ("Pipeline", "created_preprocessing_pipeline"),
+    ("Registry", "created_model_registry"),
+    ("Train", "trained_baseline_models"),
+    ("Compare", "created_model_leaderboard"),
+    ("Critique", "created_critic_report"),
+    ("Persist", "checked_model_persistence"),
+    ("Report", "created_final_report"),
+]
+
+ACTION_LABELS = {
+    "inspect_dataset": "Inspecting dataset",
+    "create_experiment_plan": "Creating experiment plan",
+    "create_preprocessing_config": "Planning preprocessing",
+    "create_preprocessing_pipeline": "Building preprocessing pipeline",
+    "create_model_registry": "Preparing model registry",
+    "train_baseline_models": "Training baseline models",
+    "compare_models": "Comparing model evidence",
+    "run_reliability_critic": "Reviewing reliability",
+    "check_model_persistence": "Checking model persistence",
+    "create_final_report": "Creating final report",
+}
+
 
 def inject_css() -> None:
-    """
-    Apply a professional product-style UI.
-    """
+    """Apply a restrained workbench-style visual system."""
 
     st.markdown(
         """
         <style>
             :root {
-                --bg: #f6f8fb;
+                --app-bg: #f5f7fa;
                 --surface: #ffffff;
-                --surface-soft: #f8fafc;
-                --text: #0f172a;
-                --muted: #64748b;
-                --border: #e2e8f0;
-                --primary: #2563eb;
-                --primary-soft: #dbeafe;
-                --green: #16a34a;
-                --green-soft: #dcfce7;
-                --amber: #d97706;
-                --amber-soft: #fef3c7;
-                --red: #dc2626;
-                --red-soft: #fee2e2;
-                --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+                --surface-muted: #f8fafc;
+                --text: #172033;
+                --muted: #667085;
+                --border: #d9e0e8;
+                --primary: #175cd3;
+                --primary-soft: #eff6ff;
+                --success: #067647;
+                --success-soft: #ecfdf3;
+                --warning: #b54708;
+                --warning-soft: #fffaeb;
+                --danger: #b42318;
+                --danger-soft: #fef3f2;
             }
 
             [data-testid="stAppViewContainer"] {
-                background:
-                    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34rem),
-                    radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 32rem),
-                    var(--bg);
+                background: var(--app-bg);
             }
 
             [data-testid="stHeader"] {
-                background: rgba(246, 248, 251, 0.72);
-                backdrop-filter: blur(14px);
+                background: rgba(245, 247, 250, 0.94);
             }
 
             .block-container {
-                max-width: 100vw !important;
-                width: 100% !important;
-                padding-top: 1.4rem !important;
-                padding-left: clamp(1rem, 3vw, 3rem) !important;
-                padding-right: clamp(1rem, 3vw, 3rem) !important;
-                padding-bottom: 4rem !important;
+                max-width: 1440px;
+                padding-top: 1.15rem;
+                padding-bottom: 3rem;
             }
 
-            h1, h2, h3 {
-                letter-spacing: -0.035em;
+            h1, h2, h3, h4 {
                 color: var(--text);
+                letter-spacing: 0;
             }
 
             p, li, label, span, div {
                 color: var(--text);
             }
 
-            .hero {
-                background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 48%, #312e81 100%);
-                border-radius: 30px;
-                padding: 2rem 2.2rem;
-                color: #ffffff;
-                box-shadow: var(--shadow);
-                position: relative;
-                overflow: hidden;
-                min-height: 260px;
-                margin-bottom: 1.4rem;
-            }
-
-            .hero:after {
-                content: "";
-                position: absolute;
-                top: -120px;
-                right: -90px;
-                width: 300px;
-                height: 300px;
-                border-radius: 999px;
-                background: rgba(255, 255, 255, 0.12);
-            }
-
-            .hero h1 {
-                color: #ffffff;
-                font-size: clamp(2.2rem, 4vw, 3.6rem);
-                line-height: 1.02;
-                margin: 0 0 1rem 0;
-                max-width: 850px;
-            }
-
-            .hero p {
-                color: #dbeafe;
-                max-width: 800px;
-                font-size: 1.08rem;
-                line-height: 1.65;
-                margin-bottom: 1.2rem;
-            }
-
-            .hero-badges {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.55rem;
-                margin-top: 1.1rem;
-            }
-
-            .hero-badge {
-                color: #eff6ff !important;
-                background: rgba(255, 255, 255, 0.12);
-                border: 1px solid rgba(255, 255, 255, 0.18);
-                padding: 0.45rem 0.75rem;
-                border-radius: 999px;
-                font-size: 0.88rem;
-                font-weight: 650;
-            }
-
-            .section-title {
-                margin-top: 1.4rem;
-                margin-bottom: 0.7rem;
-            }
-
-            .section-title h2 {
-                margin-bottom: 0.25rem;
-            }
-
-            .section-title p {
-                margin-top: 0;
-                color: var(--muted);
-                font-size: 1rem;
-            }
-
-            .card-grid {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 1rem;
-                margin: 1rem 0 1.5rem 0;
-            }
-
-            .agent-card {
-                background: #ffffff;
-                border: 1px solid var(--border);
-                border-radius: 20px;
-                padding: 1.1rem;
-                min-height: 150px;
-                box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
-            }
-
-            .agent-icon {
-                width: 42px;
-                height: 42px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 14px;
-                background: var(--primary-soft);
-                margin-bottom: 0.75rem;
-                font-size: 1.35rem;
-            }
-
-            .agent-card h3 {
-                margin: 0 0 0.25rem 0;
-                font-size: 1.05rem;
-            }
-
-            .agent-card p {
-                margin: 0;
-                color: var(--muted);
-                line-height: 1.55;
-                font-size: 0.94rem;
-            }
-
-            .upload-shell {
-                background: #ffffff;
-                border: 1px solid var(--border);
-                border-radius: 26px;
-                padding: 1.5rem;
-                box-shadow: var(--shadow);
-                margin-top: 1rem;
-                margin-bottom: 1.2rem;
-            }
-
-            .upload-title {
-                text-align: center;
-                margin-bottom: 1rem;
-            }
-
-            .upload-title h2 {
-                margin-bottom: 0.3rem;
-            }
-
-            .upload-title p {
-                color: var(--muted);
-                margin-top: 0;
-            }
-
-            .metric-card {
-                background: #ffffff;
-                border: 1px solid var(--border);
-                border-radius: 18px;
-                padding: 1rem;
-                min-height: 118px;
-                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
-            }
-
-            .metric-label {
-                color: var(--muted);
-                font-size: 0.82rem;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.04em;
-                margin-bottom: 0.45rem;
-            }
-
-            .metric-value {
-                font-size: 1.45rem;
-                line-height: 1.15;
-                font-weight: 850;
-                color: var(--text);
-                word-break: break-word;
-            }
-
-            .metric-subtext {
-                color: var(--muted);
-                font-size: 0.85rem;
-                margin-top: 0.4rem;
-                line-height: 1.35;
-            }
-
-            .badge-row {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.45rem;
-                margin: 0.4rem 0 1rem 0;
-            }
-
-            .tag {
-                display: inline-flex;
-                align-items: center;
-                border-radius: 999px;
-                padding: 0.35rem 0.6rem;
-                background: #eef2ff;
-                color: #3730a3 !important;
-                border: 1px solid #c7d2fe;
-                font-size: 0.82rem;
-                font-weight: 650;
-            }
-
-            .pill {
-                display: inline-flex;
-                align-items: center;
-                border-radius: 999px;
-                padding: 0.35rem 0.65rem;
-                font-size: 0.8rem;
-                font-weight: 750;
-                border: 1px solid var(--border);
-                background: var(--surface-soft);
-            }
-
-            .pill.green {
-                background: var(--green-soft);
-                color: #166534 !important;
-                border-color: #bbf7d0;
-            }
-
-            .pill.amber {
-                background: var(--amber-soft);
-                color: #92400e !important;
-                border-color: #fde68a;
-            }
-
-            .pill.red {
-                background: var(--red-soft);
-                color: #991b1b !important;
-                border-color: #fecaca;
-            }
-
-            .pill.blue {
-                background: var(--primary-soft);
-                color: #1e40af !important;
-                border-color: #bfdbfe;
-            }
-
-            .finding-card {
-                border-radius: 18px;
-                padding: 1rem;
-                border: 1px solid var(--border);
-                background: #ffffff;
-                margin-bottom: 0.8rem;
-            }
-
-            .finding-card.high,
-            .finding-card.critical,
-            .finding-card.error {
-                border-color: #fecaca;
-                background: #fff7f7;
-            }
-
-            .finding-card.medium,
-            .finding-card.warning {
-                border-color: #fde68a;
-                background: #fffbeb;
-            }
-
-            .finding-card.low,
-            .finding-card.info {
-                border-color: #bfdbfe;
-                background: #eff6ff;
-            }
-
-            .finding-card h4 {
-                margin: 0 0 0.5rem 0;
-            }
-
-            .finding-card p {
-                color: var(--muted);
-                margin: 0.25rem 0;
-                line-height: 1.55;
-            }
-
-            .callout {
-                border-radius: 18px;
-                padding: 1rem;
-                background: #eff6ff;
-                border: 1px solid #bfdbfe;
-                margin: 1rem 0;
-            }
-
-            .callout p {
-                margin: 0;
-                color: #1e3a8a;
-                line-height: 1.55;
-            }
-
-            .agent-workflow-shell {
-                background: #ffffff;
-                border: 1px solid var(--border);
-                border-radius: 24px;
-                padding: 1.2rem;
-                box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-                margin-top: 1rem;
-                margin-bottom: 1rem;
-            }
-
-            .agent-workflow-title {
+            .app-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 1rem;
+                padding: 0.35rem 0 1rem 0;
+                margin-bottom: 1rem;
+                border-bottom: 1px solid var(--border);
             }
 
-            .agent-workflow-title h3 {
+            .app-header h1 {
                 margin: 0;
-                font-size: 1.05rem;
+                font-size: 1.65rem;
+                line-height: 1.2;
             }
 
-            .agent-workflow-title p {
+            .app-header p {
                 margin: 0.2rem 0 0 0;
+                color: var(--muted);
+                font-size: 0.95rem;
+            }
+
+            .header-meta {
+                display: flex;
+                gap: 0.45rem;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+
+            .meta-label, .tag, .severity-label {
+                display: inline-flex;
+                align-items: center;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                background: var(--surface-muted);
+                padding: 0.28rem 0.5rem;
+                color: #344054 !important;
+                font-size: 0.78rem;
+                font-weight: 650;
+            }
+
+            .section-heading {
+                margin: 0 0 0.75rem 0;
+            }
+
+            .section-heading h2 {
+                margin: 0;
+                font-size: 1.25rem;
+            }
+
+            .section-heading p {
+                margin: 0.25rem 0 0 0;
                 color: var(--muted);
                 font-size: 0.9rem;
             }
 
-            .agent-status-pill {
-                border-radius: 999px;
-                background: var(--primary-soft);
-                color: #1e40af !important;
-                border: 1px solid #bfdbfe;
-                padding: 0.4rem 0.75rem;
-                font-size: 0.82rem;
-                font-weight: 750;
-                white-space: nowrap;
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                background: var(--surface);
+                border-color: var(--border) !important;
+                border-radius: 8px !important;
+            }
+
+            [data-testid="stMetric"] {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0.8rem 0.9rem;
+                min-height: 96px;
+            }
+
+            [data-testid="stMetricLabel"] {
+                color: var(--muted);
+            }
+
+            [data-testid="stMetricValue"] {
+                font-size: 1.45rem;
+            }
+
+            .decision-banner {
+                border: 1px solid var(--border);
+                border-left-width: 5px;
+                border-radius: 8px;
+                padding: 1rem 1.1rem;
+                margin: 0.75rem 0 1rem 0;
+                background: var(--surface);
+            }
+
+            .decision-banner h2 {
+                margin: 0;
+                font-size: 1.2rem;
+            }
+
+            .decision-banner p {
+                margin: 0.35rem 0 0 0;
+                color: #475467;
+            }
+
+            .decision-banner.success {
+                border-color: #6ce9a6;
+                border-left-color: var(--success);
+                background: var(--success-soft);
+            }
+
+            .decision-banner.warning {
+                border-color: #fec84b;
+                border-left-color: var(--warning);
+                background: var(--warning-soft);
+            }
+
+            .decision-banner.danger {
+                border-color: #fda29b;
+                border-left-color: var(--danger);
+                background: var(--danger-soft);
+            }
+
+            .finding {
+                border: 1px solid var(--border);
+                border-left: 4px solid #98a2b3;
+                border-radius: 6px;
+                padding: 0.8rem 0.9rem;
+                margin-bottom: 0.6rem;
+                background: var(--surface);
+            }
+
+            .finding.high, .finding.critical, .finding.error {
+                border-left-color: var(--danger);
+            }
+
+            .finding.medium, .finding.warning {
+                border-left-color: var(--warning);
+            }
+
+            .finding.low, .finding.info {
+                border-left-color: var(--primary);
+            }
+
+            .finding h4 {
+                margin: 0 0 0.35rem 0;
+                font-size: 0.98rem;
+            }
+
+            .finding p {
+                margin: 0.2rem 0;
+                color: #475467;
+                font-size: 0.9rem;
+                line-height: 1.45;
+            }
+
+            .tag-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.35rem;
+                margin: 0.35rem 0 0.8rem 0;
+            }
+
+            .empty-preview {
+                min-height: 310px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                color: var(--muted);
+                border: 1px dashed #b8c2cf;
+                border-radius: 8px;
+                background: var(--surface-muted);
+                padding: 2rem;
+            }
+
+            .stButton > button,
+            .stDownloadButton > button {
+                border-radius: 6px;
+                font-weight: 700;
+                min-height: 2.55rem;
             }
 
             div[data-testid="stFileUploader"] section {
-                border: 2px dashed #93c5fd !important;
-                background: #eff6ff !important;
-                border-radius: 22px !important;
-                padding: 1.1rem !important;
-            }
-
-            .stButton > button {
-                border-radius: 999px;
-                padding: 0.72rem 1.25rem;
-                font-weight: 800;
-                border: none;
-                box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
-            }
-
-            .stDownloadButton > button {
-                border-radius: 999px;
-                padding: 0.7rem 1.15rem;
-                font-weight: 800;
+                border-color: #98a2b3 !important;
+                border-radius: 8px !important;
+                background: var(--surface-muted) !important;
             }
 
             [data-testid="stDataFrame"] {
-                border-radius: 16px;
+                border: 1px solid var(--border);
+                border-radius: 6px;
                 overflow: hidden;
             }
 
-            @media (max-width: 900px) {
-                .hero h1 {
-                    font-size: 2.25rem;
+            button[data-baseweb="tab"] {
+                font-weight: 650;
+            }
+
+            @media (max-width: 760px) {
+                .app-header {
+                    align-items: flex-start;
+                    flex-direction: column;
                 }
 
-                .card-grid {
-                    grid-template-columns: 1fr;
+                .header-meta {
+                    justify-content: flex-start;
+                }
+
+                [data-testid="stMetric"] {
+                    min-height: 82px;
                 }
             }
         </style>
@@ -431,97 +1475,591 @@ def inject_css() -> None:
         unsafe_allow_html=True,
     )
 
+    # Command-centre overrides. These intentionally sit after the original
+    # workbench rules so the application's presentation can evolve without
+    # changing any modelling or orchestration behaviour.
+    st.markdown(
+        """
+        <style>
+            :root {
+                --app-bg: #060a12;
+                --surface: #0a111d;
+                --surface-muted: #0d1725;
+                --surface-raised: #111d2c;
+                --text: #f4f7fb;
+                --muted: #8494a8;
+                --border: #1c2b3d;
+                --border-bright: #2b3c51;
+                --primary: #8b7cff;
+                --primary-soft: rgba(139, 124, 255, 0.12);
+                --cyan: #3ddbec;
+                --cyan-soft: rgba(61, 219, 236, 0.08);
+                --success: #45dfa0;
+                --success-soft: rgba(69, 223, 160, 0.08);
+                --warning: #ffba69;
+                --warning-soft: rgba(255, 186, 105, 0.08);
+                --danger: #ff7184;
+                --danger-soft: rgba(255, 113, 132, 0.08);
+            }
 
-# -----------------------------------------------------------------------------
-# HELPER FUNCTIONS
-# -----------------------------------------------------------------------------
+            html, body, [data-testid="stAppViewContainer"] {
+                background:
+                    radial-gradient(circle at 65% -20%, rgba(61, 219, 236, 0.07), transparent 34%),
+                    var(--app-bg) !important;
+                color: var(--text) !important;
+            }
 
-def _safe_filename(filename: str) -> str:
-    """
-    Convert an uploaded filename into a safer local filename.
-    """
+            [data-testid="stHeader"] {
+                height: 0;
+                background: transparent !important;
+            }
 
-    allowed_chars = []
+            [data-testid="stToolbar"],
+            [data-testid="stDecoration"],
+            #MainMenu,
+            footer {
+                display: none !important;
+            }
 
-    for char in filename:
-        if char.isalnum() or char in [".", "_", "-"]:
-            allowed_chars.append(char)
-        else:
-            allowed_chars.append("_")
+            .block-container {
+                max-width: 1480px;
+                padding: 0.85rem 2.25rem 3rem;
+            }
 
-    return "".join(allowed_chars)
+            h1, h2, h3, h4, p, li, label, span, div {
+                color: var(--text);
+            }
+
+            .top-shell {
+                display: flex;
+                align-items: center;
+                min-height: 62px;
+                margin: -0.85rem -2.25rem 1.8rem;
+                padding: 0 2.25rem;
+                border-bottom: 1px solid var(--border);
+                background: rgba(6, 10, 18, 0.74);
+                backdrop-filter: blur(18px);
+            }
+
+            .brand-symbol {
+                display: grid;
+                place-items: center;
+                width: 38px;
+                height: 38px;
+                margin-right: 0.8rem;
+                border: 1px solid var(--cyan);
+                border-radius: 10px;
+                color: var(--cyan) !important;
+                font-size: 1.08rem;
+                font-weight: 800;
+                box-shadow: 0 0 24px rgba(61, 219, 236, 0.08);
+            }
+
+            .brand-name {
+                font-size: 1.02rem;
+                font-weight: 750;
+                letter-spacing: -0.02em;
+            }
+
+            .brand-name span {
+                margin-left: 0.32rem;
+                color: var(--muted) !important;
+                font-weight: 520;
+            }
+
+            .system-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                margin-left: auto;
+                color: var(--muted) !important;
+                font-size: 0.72rem;
+                font-weight: 600;
+            }
+
+            .system-pill i,
+            .reliability-pill i {
+                display: inline-block;
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--success);
+                box-shadow: 0 0 12px var(--success);
+            }
+
+            .hero-row {
+                display: flex;
+                align-items: flex-end;
+                justify-content: space-between;
+                gap: 1rem;
+                margin: 0 0 1.25rem;
+            }
+
+            .eyebrow {
+                display: block;
+                margin-bottom: 0.45rem;
+                color: var(--cyan) !important;
+                font-size: 0.64rem;
+                font-weight: 750;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+            }
+
+            .hero-row h1 {
+                margin: 0;
+                font-size: clamp(2rem, 3.4vw, 3.25rem);
+                line-height: 0.98;
+                letter-spacing: -0.055em;
+                font-weight: 660;
+            }
+
+            .agent-ready {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                min-width: 160px;
+                padding: 0.65rem 0.8rem;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: rgba(13, 23, 37, 0.72);
+            }
+
+            .agent-orbit {
+                position: relative;
+                width: 33px;
+                height: 33px;
+                border: 1px solid var(--border-bright);
+                border-radius: 50%;
+            }
+
+            .agent-orbit::before,
+            .agent-orbit::after {
+                content: "";
+                position: absolute;
+                width: 5px;
+                height: 5px;
+                border-radius: 50%;
+                background: var(--cyan);
+                box-shadow: 0 0 8px var(--cyan);
+            }
+
+            .agent-orbit::before { top: 2px; left: 13px; }
+            .agent-orbit::after { right: 3px; bottom: 5px; background: var(--primary); }
+            .agent-ready strong { display: block; font-size: 0.73rem; }
+            .agent-ready small { display: block; margin-top: 0.12rem; color: var(--muted); font-size: 0.62rem; }
+
+            .experiment-label {
+                margin-bottom: 0.45rem;
+                color: var(--muted) !important;
+                font-size: 0.66rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                border: 1px solid var(--border) !important;
+                border-radius: 15px !important;
+                background: linear-gradient(145deg, rgba(13, 23, 37, 0.96), rgba(8, 15, 26, 0.96)) !important;
+                box-shadow: 0 22px 70px rgba(0, 0, 0, 0.16);
+            }
+
+            div[data-testid="stVerticalBlockBorderWrapper"] > div {
+                background: transparent !important;
+            }
+
+            [data-testid="stRadio"] > label,
+            [data-testid="stFileUploader"] > label,
+            [data-testid="stTextArea"] > label,
+            [data-testid="stSelectbox"] > label,
+            [data-testid="stCheckbox"] > label {
+                color: var(--muted) !important;
+                font-size: 0.7rem !important;
+                font-weight: 650 !important;
+            }
+
+            [data-baseweb="radio"] {
+                padding: 0.34rem 0.58rem;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.018);
+            }
+
+            div[data-testid="stFileUploader"] section {
+                min-height: 220px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px dashed #2f7483 !important;
+                border-radius: 12px !important;
+                background:
+                    repeating-linear-gradient(0deg, transparent 0 31px, rgba(255,255,255,.018) 32px),
+                    repeating-linear-gradient(90deg, transparent 0 31px, rgba(255,255,255,.018) 32px),
+                    rgba(61, 219, 236, 0.025) !important;
+                transition: 0.18s ease;
+            }
+
+            div[data-testid="stFileUploader"] section:hover {
+                border-color: var(--cyan) !important;
+                background-color: rgba(61, 219, 236, 0.045) !important;
+            }
+
+            div[data-testid="stFileUploader"] section button {
+                border: 1px solid var(--border-bright) !important;
+                background: var(--surface-raised) !important;
+                color: var(--text) !important;
+            }
+
+            .sample-ready,
+            .upload-intro {
+                min-height: 220px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 0.4rem;
+                border: 1px solid #24596a;
+                border-radius: 12px;
+                background: var(--cyan-soft);
+                text-align: center;
+            }
+
+            .sample-icon {
+                display: grid;
+                place-items: center;
+                width: 52px;
+                height: 52px;
+                margin-bottom: 0.35rem;
+                border: 1px solid var(--cyan);
+                border-radius: 13px;
+                color: var(--cyan) !important;
+                font-weight: 800;
+            }
+
+            .sample-ready strong { font-size: 0.92rem; }
+            .sample-ready span { color: var(--muted) !important; font-size: 0.68rem; }
+
+            [data-baseweb="textarea"] textarea,
+            [data-baseweb="select"] > div,
+            [data-baseweb="input"] > div {
+                border-color: var(--border-bright) !important;
+                background: #09121f !important;
+                color: var(--text) !important;
+            }
+
+            [data-baseweb="textarea"] textarea:focus,
+            [data-baseweb="select"] > div:focus-within {
+                border-color: var(--cyan) !important;
+                box-shadow: 0 0 0 1px var(--cyan) !important;
+            }
+
+            .stButton > button,
+            .stDownloadButton > button {
+                min-height: 2.75rem;
+                border: 1px solid var(--border-bright);
+                border-radius: 9px;
+                background: rgba(255, 255, 255, 0.025);
+                color: var(--text);
+                font-size: 0.76rem;
+                font-weight: 720;
+                transition: 0.16s ease;
+            }
+
+            .stButton > button[kind="primary"],
+            .stDownloadButton > button[kind="primary"] {
+                border: 0 !important;
+                background: linear-gradient(105deg, #654ce3, #8a75ff) !important;
+                box-shadow: 0 12px 30px rgba(103, 77, 226, 0.2);
+            }
+
+            .stButton > button:hover:not(:disabled),
+            .stDownloadButton > button:hover:not(:disabled) {
+                border-color: var(--cyan);
+                color: white;
+                transform: translateY(-1px);
+            }
+
+            .stButton > button:disabled { opacity: 0.34; }
+
+            .dataset-strip {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 0.6rem;
+                margin: 0.9rem 0 0.5rem;
+            }
+
+            .dataset-stat {
+                padding: 0.68rem 0.78rem;
+                border: 1px solid var(--border);
+                border-radius: 9px;
+                background: rgba(255, 255, 255, 0.018);
+            }
+
+            .dataset-stat span { display: block; color: var(--muted) !important; font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; }
+            .dataset-stat strong { display: block; margin-top: 0.18rem; font-size: 0.94rem; font-variant-numeric: tabular-nums; }
+
+            .workflow-shell {
+                margin: 0.9rem 0 0;
+                padding: 0.9rem 1.05rem 0.95rem;
+                border: 1px solid var(--border);
+                border-radius: 13px;
+                background: linear-gradient(145deg, rgba(13, 23, 37, 0.9), rgba(8, 15, 26, 0.9));
+            }
+
+            .workflow-header {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                margin-bottom: 0.85rem;
+            }
+
+            .workflow-header strong { font-size: 0.72rem; }
+            .workflow-header span { color: var(--muted) !important; font-size: 0.6rem; }
+            .workflow-track { position: relative; display: grid; grid-template-columns: repeat(10, 1fr); min-width: 700px; }
+            .workflow-track::before { content: ""; position: absolute; top: 12px; left: 4%; right: 4%; height: 1px; background: var(--border-bright); }
+            .workflow-step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.42rem; color: #65758a !important; }
+            .workflow-step b { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--border-bright); border-radius: 50%; background: #0b1421; color: inherit !important; font-size: 0.58rem; font-weight: 650; }
+            .workflow-step small { color: inherit !important; font-size: 0.56rem; white-space: nowrap; }
+            .workflow-step.complete { color: var(--cyan) !important; }
+            .workflow-step.complete b { border-color: var(--cyan); background: #0b2530; }
+            .workflow-step.current { color: #b2a8ff !important; }
+            .workflow-step.current b { border-color: var(--primary); background: #201b42; box-shadow: 0 0 0 4px rgba(139, 124, 255, 0.1); }
+
+            .section-heading { margin: 1.4rem 0 0.7rem; }
+            .section-heading h2 { margin: 0; font-size: 1.03rem; letter-spacing: -0.02em; }
+            .section-heading p { margin: 0.18rem 0 0; color: var(--muted); font-size: 0.72rem; }
+
+            [data-testid="stMetric"] {
+                min-height: 84px;
+                padding: 0.72rem 0.82rem;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                background: rgba(13, 23, 37, 0.86);
+            }
+
+            [data-testid="stMetricLabel"] p { color: var(--muted) !important; font-size: 0.65rem; }
+            [data-testid="stMetricValue"] { color: var(--text); font-size: 1.22rem; }
+
+            .decision-banner {
+                border: 1px solid var(--border);
+                border-left-width: 4px;
+                border-radius: 11px;
+                padding: 0.88rem 1rem;
+                margin: 0.6rem 0 0.8rem;
+                background: var(--surface);
+            }
+
+            .decision-banner h2 { margin: 0; font-size: 0.96rem; }
+            .decision-banner p { margin: 0.24rem 0 0; color: var(--muted); font-size: 0.7rem; }
+            .decision-banner.success { border-color: rgba(69, 223, 160, 0.28); border-left-color: var(--success); background: var(--success-soft); }
+            .decision-banner.warning { border-color: rgba(255, 186, 105, 0.28); border-left-color: var(--warning); background: var(--warning-soft); }
+            .decision-banner.danger { border-color: rgba(255, 113, 132, 0.28); border-left-color: var(--danger); background: var(--danger-soft); }
+
+            .finding { border-color: var(--border); background: rgba(13, 23, 37, 0.75); }
+            .finding h4 { font-size: 0.82rem; }
+            .finding p { color: var(--muted); font-size: 0.7rem; }
+            .meta-label, .tag, .severity-label { border-color: var(--border); background: var(--surface-muted); color: #bac7d5 !important; font-size: 0.62rem; }
+
+            [data-testid="stDataFrame"] { border-color: var(--border); border-radius: 9px; }
+            [data-testid="stExpander"] { border-color: var(--border); border-radius: 9px; background: rgba(13, 23, 37, 0.55); }
+            [data-testid="stExpander"] summary p { font-size: 0.7rem; }
+
+            [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 0.2rem; border-bottom: 1px solid var(--border); }
+            button[data-baseweb="tab"] { color: var(--muted); font-size: 0.72rem; font-weight: 650; }
+            button[data-baseweb="tab"][aria-selected="true"] { color: var(--cyan); }
+
+            [data-testid="stStatusWidget"] { border-color: var(--border); background: var(--surface); }
+            [data-testid="stProgress"] > div > div { background: linear-gradient(90deg, var(--cyan), var(--primary)); }
+
+            @media (max-width: 900px) {
+                .block-container { padding: 0.75rem 1rem 2rem; }
+                .top-shell { margin: -0.75rem -1rem 1.35rem; padding: 0 1rem; }
+                .dataset-strip { grid-template-columns: repeat(2, 1fr); }
+                .workflow-shell { overflow-x: auto; }
+            }
+
+            @media (max-width: 620px) {
+                .hero-row { align-items: flex-start; }
+                .agent-ready { min-width: auto; padding: 0.5rem; }
+                .agent-ready > div:last-child { display: none; }
+                .system-pill { font-size: 0; }
+                .system-pill::after { content: "Ready"; font-size: 0.68rem; }
+                .dataset-strip { grid-template-columns: 1fr 1fr; }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-def _save_uploaded_file(uploaded_file) -> str:
-    """
-    Save uploaded CSV file into data/raw and return its local path.
-    """
-
-    raw_dir = Path("data/raw")
-    raw_dir.mkdir(parents=True, exist_ok=True)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_name = _safe_filename(uploaded_file.name)
-
-    output_path = raw_dir / f"{timestamp}_{safe_name}"
-    output_path.write_bytes(uploaded_file.getvalue())
-
-    return str(output_path)
+def _safe_text(value: Any, fallback: str = "N/A") -> str:
+    if value is None or value == "":
+        return escape(fallback)
+    return escape(str(value))
 
 
-def _format_metric(value: Any) -> Any:
-    """
-    Format metric values for display.
-    """
-
+def _format_metric(value: Any) -> float | None:
     if value is None:
         return None
 
     try:
         return round(float(value), 4)
-    except Exception:
-        return value
+    except (TypeError, ValueError):
+        return None
 
 
-def _safe_text(value: Any, fallback: str = "N/A") -> str:
-    """
-    Return escaped display text for HTML snippets.
-    """
-
-    if value is None or value == "":
-        return fallback
-
-    return escape(str(value))
+def _display_value(value: Any, fallback: str = "N/A") -> str:
+    formatted = _format_metric(value)
+    return str(formatted) if formatted is not None else str(value or fallback)
 
 
-def _shorten(value: Any, max_chars: int = 42) -> str:
-    """
-    Shorten long values for cards.
-    """
+def _safe_filename(filename: str) -> str:
+    allowed = [char if char.isalnum() or char in ".-_" else "_" for char in filename]
+    return "".join(allowed) or "dataset.csv"
 
-    text = str(value) if value is not None else "N/A"
 
-    if len(text) <= max_chars:
-        return text
+def _save_uploaded_file(uploaded_file: Any) -> str:
+    raw_dir = Path("data/raw")
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    output_path = raw_dir / f"{timestamp}_{_safe_filename(uploaded_file.name)}"
+    output_path.write_bytes(uploaded_file.getvalue())
+    return str(output_path)
 
-    return text[: max_chars - 1] + "…"
+
+def safe_container_with_border():
+    try:
+        return st.container(border=True)
+    except TypeError:
+        return st.container()
+
+
+def render_header() -> None:
+    st.markdown(
+        """
+        <div class="top-shell">
+            <div class="brand-symbol">A</div>
+            <div class="brand-name">Agentic AutoML <span>Advisor</span></div>
+            <div class="system-pill"><i></i> System ready</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_agent_workflow(state: ExperimentState | None = None) -> None:
+    """Render the controlled ten-step workflow as a compact visual rail."""
+
+    completed = set(state.completed_steps if state else [])
+    completed_count = sum(marker in completed for _, marker in WORKFLOW_STEPS)
+    current_index = min(completed_count, len(WORKFLOW_STEPS) - 1)
+
+    steps_html = []
+    for index, (label, marker) in enumerate(WORKFLOW_STEPS):
+        is_complete = marker in completed
+        is_current = state is not None and not is_complete and index == current_index
+        state_class = "complete" if is_complete else "current" if is_current else ""
+        marker_text = "&#10003;" if is_complete else str(index + 1)
+        steps_html.append(
+            f'<div class="workflow-step {state_class}">'
+            f'<b>{marker_text}</b><small>{_safe_text(label)}</small></div>'
+        )
+
+    status_text = f"{completed_count} of {len(WORKFLOW_STEPS)} complete" if state else "Ready"
+    st.markdown(
+        f"""
+        <div class="workflow-shell">
+            <div class="workflow-header">
+                <strong>Agent workflow</strong>
+                <span>{status_text}</span>
+            </div>
+            <div class="workflow-track">{''.join(steps_html)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_dataset_strip(df: pd.DataFrame, target_column: str | None) -> None:
+    """Show only the dataset facts needed before a run."""
+
+    missing_cells = int(df.isna().sum().sum())
+    numeric_columns = int(df.select_dtypes(include="number").shape[1])
+    target_values = df[target_column].nunique(dropna=True) if target_column else "—"
+    st.markdown(
+        f"""
+        <div class="dataset-strip">
+            <div class="dataset-stat"><span>Rows</span><strong>{len(df):,}</strong></div>
+            <div class="dataset-stat"><span>Columns</span><strong>{len(df.columns):,}</strong></div>
+            <div class="dataset-stat"><span>Missing cells</span><strong>{missing_cells:,}</strong></div>
+            <div class="dataset-stat"><span>{'Target values' if target_column else 'Numeric columns'}</span><strong>{target_values if target_column else numeric_columns}</strong></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_section_title(title: str, subtitle: str | None = None) -> None:
+    subtitle_html = f"<p>{_safe_text(subtitle)}</p>" if subtitle else ""
+    st.markdown(
+        f"""
+        <div class="section-heading">
+            <h2>{_safe_text(title)}</h2>
+            {subtitle_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def display_tags(
+    values: list[Any],
+    empty_message: str = "None detected.",
+    max_items: int = 24,
+) -> None:
+    if not values:
+        st.caption(empty_message)
+        return
+
+    shown = values[:max_items]
+    tags = "".join(f'<span class="tag">{_safe_text(value)}</span>' for value in shown)
+    hidden_count = len(values) - len(shown)
+
+    if hidden_count > 0:
+        tags += f'<span class="tag">+{hidden_count} more</span>'
+
+    st.markdown(f'<div class="tag-row">{tags}</div>', unsafe_allow_html=True)
+
+
+def render_finding(finding: dict[str, Any], evidence_key: str) -> None:
+    severity = str(finding.get("severity", "info")).lower()
+    st.markdown(
+        f"""
+        <div class="finding {escape(severity)}">
+            <h4><span class="severity-label">{_safe_text(severity.upper())}</span>
+                {_safe_text(finding.get("issue", "Finding"))}</h4>
+            <p><strong>{_safe_text(evidence_key.replace('_', ' ').title())}:</strong>
+                {_safe_text(finding.get(evidence_key, "Not available"))}</p>
+            <p><strong>Recommendation:</strong>
+                {_safe_text(finding.get("recommendation", "Not available"))}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def make_quality_dataframe(quality_issues: list[dict[str, Any]]) -> pd.DataFrame:
-    """
-    Convert quality issues into a display dataframe.
-    """
-
-    if not quality_issues:
-        return pd.DataFrame()
-
     return pd.DataFrame(
         [
             {
-                "Severity": issue.get("severity", "N/A"),
-                "Issue": issue.get("issue", "N/A"),
-                "Finding": issue.get("finding", "N/A"),
-                "Recommendation": issue.get("recommendation", "N/A"),
+                "Severity": issue.get("severity"),
+                "Issue": issue.get("issue"),
+                "Finding": issue.get("finding"),
+                "Recommendation": issue.get("recommendation"),
             }
             for issue in quality_issues
         ]
@@ -529,18 +2067,10 @@ def make_quality_dataframe(quality_issues: list[dict[str, Any]]) -> pd.DataFrame
 
 
 def make_leaderboard_dataframe(leaderboard: list[dict[str, Any]]) -> pd.DataFrame:
-    """
-    Convert leaderboard into a readable display dataframe.
-    """
-
-    if not leaderboard:
-        return pd.DataFrame()
-
     rows = []
 
     for item in leaderboard:
         improvement = item.get("improvement_over_dummy", {}) or {}
-
         rows.append(
             {
                 "Rank": item.get("rank"),
@@ -550,7 +2080,8 @@ def make_leaderboard_dataframe(leaderboard: list[dict[str, Any]]) -> pd.DataFram
                 "CV Score": _format_metric(item.get("primary_score")),
                 "CV Std": _format_metric(item.get("primary_cv_std")),
                 "Train Score": _format_metric(item.get("primary_train_score")),
-                "Overfit Gap": _format_metric(item.get("overfit_gap")),
+                "Dummy Score": _format_metric(item.get("dummy_baseline_score")),
+                "Improvement": _format_metric(improvement.get("raw_improvement")),
                 "Beats Dummy": improvement.get("beats_dummy"),
                 "Reliability": item.get("reliability_level"),
             }
@@ -560,21 +2091,17 @@ def make_leaderboard_dataframe(leaderboard: list[dict[str, Any]]) -> pd.DataFram
 
 
 def make_training_metrics_dataframe(model_results: list[dict[str, Any]]) -> pd.DataFrame:
-    """
-    Convert nested model metrics into a long dataframe.
-    """
-
     rows = []
 
     for result in model_results:
-        for metric_name, metric_values in result.get("metrics", {}).items():
+        for metric_name, values in result.get("metrics", {}).items():
             rows.append(
                 {
                     "Model": result.get("display_name"),
                     "Metric": metric_name,
-                    "CV Mean": _format_metric(metric_values.get("cv_mean")),
-                    "CV Std": _format_metric(metric_values.get("cv_std")),
-                    "Train Mean": _format_metric(metric_values.get("train_mean")),
+                    "CV Mean": _format_metric(values.get("cv_mean")),
+                    "CV Std": _format_metric(values.get("cv_std")),
+                    "Train Mean": _format_metric(values.get("train_mean")),
                 }
             )
 
@@ -582,13 +2109,6 @@ def make_training_metrics_dataframe(model_results: list[dict[str, Any]]) -> pd.D
 
 
 def make_timeline_dataframe(tool_history: list[dict[str, Any]]) -> pd.DataFrame:
-    """
-    Convert tool history into a display dataframe.
-    """
-
-    if not tool_history:
-        return pd.DataFrame()
-
     return pd.DataFrame(
         [
             {
@@ -602,348 +2122,35 @@ def make_timeline_dataframe(tool_history: list[dict[str, Any]]) -> pd.DataFrame:
     )
 
 
-def render_section_title(title: str, subtitle: str | None = None) -> None:
-    """
-    Render a consistent section heading.
-    """
-
-    subtitle_html = f"<p>{_safe_text(subtitle)}</p>" if subtitle else ""
-
-    st.markdown(
-        f"""
-        <div class="section-title">
-            <h2>{_safe_text(title)}</h2>
-            {subtitle_html}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def render_metric_card(label: str, value: Any, subtext: str = "") -> None:
-    """
-    Render a custom metric card.
-    """
-
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-label">{_safe_text(label)}</div>
-            <div class="metric-value">{_safe_text(_shorten(value))}</div>
-            <div class="metric-subtext">{_safe_text(subtext, "")}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def render_pill(text: Any, tone: str = "blue") -> str:
-    """
-    Return a pill HTML string.
-    """
-
-    return f'<span class="pill {tone}">{_safe_text(text)}</span>'
-
-
-def reliability_tone(value: Any) -> str:
-    """
-    Map reliability or severity words to visual tones.
-    """
-
-    text = str(value or "").lower()
-
-    if any(word in text for word in ["high", "good", "strong", "reliable", "pass", "done"]):
-        return "green"
-
-    if any(word in text for word in ["low", "poor", "weak", "fail", "risk", "critical", "error"]):
-        return "red"
-
-    return "amber"
-
-
-def display_tags(
-    values: list[Any],
-    empty_message: str = "None detected.",
-    max_items: int = 28,
-) -> None:
-    """
-    Display a list as readable tags instead of raw Python output.
-    """
-
-    if not values:
-        st.caption(empty_message)
-        return
-
-    shown = values[:max_items]
-    hidden_count = max(0, len(values) - len(shown))
-
-    tags = "".join(
-        f'<span class="tag">{_safe_text(value)}</span>'
-        for value in shown
-    )
-
-    if hidden_count:
-        tags += f'<span class="tag">+{hidden_count} more</span>'
-
-    st.markdown(
-        f'<div class="badge-row">{tags}</div>',
-        unsafe_allow_html=True,
-    )
-
-
-def safe_container_with_border():
-    """
-    Use bordered containers when the installed Streamlit version supports it.
-    """
-
-    try:
-        return st.container(border=True)
-    except TypeError:
-        return st.container()
-
-
-# -----------------------------------------------------------------------------
-# TOP UI SECTIONS
-# -----------------------------------------------------------------------------
-
-def show_hero() -> None:
-    """
-    Render the main product hero.
-    """
-
-    st.markdown(
-        """
-        <div class="hero">
-            <h1>Agentic AutoML Advisor</h1>
-            <p>
-                Upload a tabular CSV dataset and let a guided ML advisor inspect the data,
-                plan the experiment, train baseline models, compare them against a dummy baseline,
-                critique the reliability of the results, and generate a clear final report.
-            </p>
-            <div class="hero-badges">
-                <span class="hero-badge">CSV datasets</span>
-                <span class="hero-badge">Classification & regression</span>
-                <span class="hero-badge">Baseline comparison</span>
-                <span class="hero-badge">Reliability critic</span>
-                <span class="hero-badge">Final report</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def show_agent_cards() -> None:
-    """
-    Explain the agentic workflow.
-    """
-
-    render_section_title(
-        "How the advisor works",
-        "The system behaves like a small ML team. Each agent has a clear responsibility.",
-    )
-
-    st.markdown(
-        """
-        <div class="card-grid">
-            <div class="agent-card">
-                <div class="agent-icon">🧭</div>
-                <h3>Orchestrator Agent</h3>
-                <p>Controls the full workflow and decides which step should run next.</p>
-            </div>
-            <div class="agent-card">
-                <div class="agent-icon">🧪</div>
-                <h3>Planner Agent</h3>
-                <p>Understands the dataset, detects the ML task, and creates the experiment strategy.</p>
-            </div>
-            <div class="agent-card">
-                <div class="agent-icon">🛡️</div>
-                <h3>Critic Agent</h3>
-                <p>Checks whether model results are trustworthy, useful, and better than a dummy baseline.</p>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def show_workflow_stepper(done: bool = False, active_index: int = 1) -> None:
-    """
-    Show a clean native Streamlit agent workflow panel.
-    This avoids the raw HTML issue from the previous version.
-    """
-
-    steps = [
-        {
-            "name": "Inspect",
-            "agent": "Data Scanner",
-            "icon": "🔎",
-            "desc": "Reads the CSV and profiles the dataset.",
-        },
-        {
-            "name": "Plan",
-            "agent": "Planner Agent",
-            "icon": "🧪",
-            "desc": "Detects task type and experiment strategy.",
-        },
-        {
-            "name": "Preprocess",
-            "agent": "Data Prep Agent",
-            "icon": "🧹",
-            "desc": "Handles missing values and feature encoding.",
-        },
-        {
-            "name": "Train",
-            "agent": "Model Agent",
-            "icon": "🏗️",
-            "desc": "Trains baseline ML models.",
-        },
-        {
-            "name": "Compare",
-            "agent": "Evaluator Agent",
-            "icon": "🏆",
-            "desc": "Ranks models against the dummy baseline.",
-        },
-        {
-            "name": "Critique",
-            "agent": "Critic Agent",
-            "icon": "🛡️",
-            "desc": "Checks reliability and usefulness.",
-        },
-        {
-            "name": "Report",
-            "agent": "Report Agent",
-            "icon": "📄",
-            "desc": "Creates the final advisor report.",
-        },
-    ]
-
-    progress_value = 1.0 if done else max(0.05, min(active_index / len(steps), 1.0))
-    run_status = "Completed" if done else f"Step {active_index} of {len(steps)}"
-
-    st.markdown(
-        f"""
-        <div class="agent-workflow-shell">
-            <div class="agent-workflow-title">
-                <div>
-                    <h3>🤖 Agent workflow</h3>
-                    <p>The advisor moves from dataset inspection to model critique and final reporting.</p>
-                </div>
-                <span class="agent-status-pill">{run_status}</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.progress(progress_value)
-
-    cols = st.columns(len(steps), gap="small")
-
-    for index, step in enumerate(steps, start=1):
-        with cols[index - 1]:
-            if done or index < active_index:
-                status_text = "Done"
-                status_method = st.success
-                status_icon = "✅"
-            elif index == active_index:
-                status_text = "Active"
-                status_method = st.info
-                status_icon = "🤖"
-            else:
-                status_text = "Waiting"
-                status_method = st.caption
-                status_icon = "○"
-
-            with safe_container_with_border():
-                st.markdown(f"### {status_icon}")
-                st.markdown(f"**{step['name']}**")
-                st.caption(step["agent"])
-                st.caption(step["desc"])
-                status_method(status_text)
-
-
-def show_sidebar_guide() -> None:
-    """
-    Keep sidebar useful but not dominant.
-    """
-
-    with st.sidebar:
-        st.markdown("## 🤖 AutoML Advisor")
-
-        st.caption(
-            "A guided first-pass machine learning advisor for tabular CSV datasets."
-        )
-
-        st.markdown("### Best for")
-        st.markdown(
-            """
-            - Loan approval prediction
-            - Customer churn
-            - Student performance
-            - Sales or price prediction
-            - Small-to-medium tabular ML experiments
-            """
-        )
-
-        st.markdown("### You need")
-        st.markdown(
-            """
-            - A CSV file
-            - One target column
-            - A short objective
-            """
-        )
-
-        st.markdown("### You get")
-        st.markdown(
-            """
-            - Dataset profile
-            - Experiment plan
-            - Model leaderboard
-            - Reliability critique
-            - Downloadable report
-            """
-        )
-
-
-# -----------------------------------------------------------------------------
-# DATA LOADING
-# -----------------------------------------------------------------------------
-
 def load_sample_dataset() -> tuple[str | None, pd.DataFrame | None, str | None]:
-    """
-    Load the built-in sample dataset if available.
-    """
-
     sample_path = Path("data/sample/loan_sample.csv")
 
-    if not sample_path.exists():
-        return None, None, "Sample dataset not found at data/sample/loan_sample.csv"
-
     try:
-        df = pd.read_csv(sample_path)
-        return str(sample_path), df, None
+        return str(sample_path), pd.read_csv(sample_path), None
     except Exception as error:
-        return None, None, f"Could not read sample dataset: {error}"
+        return None, None, f"Could not load sample dataset: {error}"
 
 
-def load_uploaded_dataset(uploaded_file) -> tuple[pd.DataFrame | None, str | None]:
-    """
-    Read uploaded CSV bytes into a dataframe preview.
-    """
-
+def load_uploaded_dataset(uploaded_file: Any) -> tuple[pd.DataFrame | None, str | None]:
     if uploaded_file is None:
         return None, None
 
     try:
-        df = pd.read_csv(io.BytesIO(uploaded_file.getvalue()))
-        return df, None
+        return pd.read_csv(io.BytesIO(uploaded_file.getvalue())), None
     except Exception as error:
         return None, f"Could not read uploaded CSV: {error}"
 
 
-def show_setup_panel() -> tuple[
+def show_sidebar_help() -> None:
+    with st.sidebar:
+        st.markdown("## Agentic AutoML")
+        st.caption("A controlled modelling workflow for tabular CSV data.")
+        st.markdown("**Scope**")
+        st.caption("Classification · Regression · Baseline comparison · Reliability review")
+        st.info("The critic can withhold a recommendation when the evidence is weak.")
+
+
+def show_setup_workbench() -> tuple[
     pd.DataFrame | None,
     str | None,
     Any,
@@ -952,142 +2159,132 @@ def show_setup_panel() -> tuple[
     bool,
     bool,
 ]:
-    """
-    Render the centered experiment setup panel.
-    """
-
-    render_section_title(
-        "Start a new AutoML run",
-        "Use the sample dataset for a quick demo, or upload your own CSV file.",
-    )
-
     st.markdown(
         """
-        <div class="upload-shell">
-            <div class="upload-title">
-                <h2>Upload your dataset</h2>
-                <p>Choose a CSV, select the target column, and let the agents run the ML workflow.</p>
+        <div class="hero-row">
+            <div>
+                <span class="eyebrow">New experiment</span>
+                <h1>Build a trusted model.</h1>
+            </div>
+            <div class="agent-ready">
+                <div class="agent-orbit"></div>
+                <div><strong>10 agents ready</strong><small>Controlled workflow</small></div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    left_space, main_col, right_space = st.columns([0.15, 0.70, 0.15])
+    uploaded_file = None
+    dataset_path_for_run = None
+    df_preview = None
+    error = None
+    target_column = None
+    user_objective = None
+    approve_drop_id_columns = True
 
-    with main_col:
+    with safe_container_with_border():
+        st.markdown('<div class="experiment-label">Dataset source</div>', unsafe_allow_html=True)
         dataset_mode = st.radio(
-            "Choose dataset source",
-            options=["Use sample loan dataset", "Upload my own CSV"],
+            "Dataset source",
+            options=["Upload CSV", "Use sample dataset"],
             horizontal=True,
+            key="dataset_source",
             label_visibility="collapsed",
         )
 
-        df_preview = None
-        dataset_path_for_run = None
-        uploaded_file = None
+        source_col, details_col = st.columns([0.58, 0.42], gap="large")
 
-        if dataset_mode == "Use sample loan dataset":
-            dataset_path_for_run, df_preview, error = load_sample_dataset()
+        with source_col:
+            if dataset_mode == "Use sample dataset":
+                dataset_path_for_run, df_preview, error = load_sample_dataset()
+                st.markdown(
+                    """
+                    <div class="sample-ready">
+                        <div class="sample-icon">CSV</div>
+                        <strong>loan_sample.csv</strong>
+                        <span>Sample dataset ready</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                uploaded_file = st.file_uploader(
+                    "Upload CSV dataset",
+                    type=["csv"],
+                    help="Upload one structured CSV file.",
+                    label_visibility="collapsed",
+                    key="dataset_upload",
+                )
+                df_preview, error = load_uploaded_dataset(uploaded_file)
 
             if error:
                 st.error(error)
-            elif df_preview is not None:
-                st.success("Sample loan dataset loaded. You can run the advisor immediately.")
 
-        else:
-            uploaded_file = st.file_uploader(
-                "Drop your CSV here or click to browse",
-                type=["csv"],
-                help=(
-                    "Upload a tabular CSV file. "
-                    "The advisor will ask you to select the target column next."
-                ),
+        with details_col:
+            st.markdown('<div class="experiment-label">Experiment details</div>', unsafe_allow_html=True)
+
+            if df_preview is not None:
+                target_options = list(df_preview.columns)
+                default_index = None
+                if dataset_mode == "Use sample dataset" and "Loan_Status" in target_options:
+                    default_index = target_options.index("Loan_Status")
+
+                target_column = st.selectbox(
+                    "Prediction target",
+                    options=target_options,
+                    index=default_index,
+                    placeholder="Select the column to predict",
+                )
+            else:
+                st.selectbox(
+                    "Prediction target",
+                    options=[],
+                    placeholder="Upload a dataset first",
+                    disabled=True,
+                )
+
+            objective_default = (
+                "Predict whether a loan application will be approved"
+                if dataset_mode == "Use sample dataset"
+                else ""
             )
-
-            df_preview, error = load_uploaded_dataset(uploaded_file)
-
-            if error:
-                st.error(error)
-            elif df_preview is not None:
-                st.success("CSV uploaded successfully. Select your target column below.")
-
-        target_column = None
-        user_objective = None
-        approve_drop_id_columns = True
-        run_button = False
-
-        if df_preview is not None:
-            st.markdown("---")
-
-            c1, c2, c3 = st.columns(3)
-
-            with c1:
-                render_metric_card(
-                    "Rows",
-                    f"{df_preview.shape[0]:,}",
-                    "Total records detected",
-                )
-
-            with c2:
-                render_metric_card(
-                    "Columns",
-                    f"{df_preview.shape[1]:,}",
-                    "Including the target column",
-                )
-
-            with c3:
-                render_metric_card(
-                    "Missing cells",
-                    f"{int(df_preview.isna().sum().sum()):,}",
-                    "Before preprocessing",
-                )
-
-            target_column = st.selectbox(
-                "What should the advisor predict?",
-                options=list(df_preview.columns),
-                help=(
-                    "Select the target/output column. The remaining columns will be "
-                    "treated as features unless removed by preprocessing."
-                ),
-            )
-
+            objective_key = "sample_objective" if dataset_mode == "Use sample dataset" else "upload_objective"
             user_objective = st.text_area(
-                "Describe your ML objective",
-                value="Predict whether a loan application will be approved",
-                help=(
-                    "Write a short business or analytics goal. "
-                    "This will be included in the final report."
-                ),
+                "Experiment objective",
+                value=objective_default,
+                placeholder="What should the model predict?",
+                key=objective_key,
+                disabled=df_preview is None,
+                height=86,
             )
 
-            approve_drop_id_columns = st.checkbox(
-                "Allow the advisor to drop possible ID columns",
-                value=True,
-                help=(
-                    "Recommended. Columns like Loan_ID or Customer_ID usually do not "
-                    "help generalisable model learning."
-                ),
-            )
-
-            st.markdown(
-                """
-                <div class="callout">
-                    <p>
-                        <strong>What happens after you click run?</strong><br>
-                        The orchestrator will profile your dataset, create a plan, preprocess features,
-                        train baseline models, compare results, run a reliability critique, and generate a report.
-                    </p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            with st.expander("Advanced options", expanded=False):
+                approve_drop_id_columns = st.checkbox(
+                    "Drop likely identifier columns",
+                    value=True,
+                    help="Columns such as Customer_ID usually do not generalise to new records.",
+                )
 
             run_button = st.button(
-                "Run Agentic AutoML Advisor",
+                "Start experiment  →",
                 type="primary",
                 width="stretch",
+                disabled=df_preview is None or target_column is None or not user_objective,
             )
+
+    if df_preview is not None:
+        render_dataset_strip(df_preview, target_column)
+        with st.expander("Preview dataset", expanded=False):
+            st.dataframe(
+                df_preview.head(20),
+                width="stretch",
+                hide_index=True,
+                height=280,
+            )
+
+    if "last_state" not in st.session_state:
+        render_agent_workflow()
 
     return (
         df_preview,
@@ -1100,545 +2297,479 @@ def show_setup_panel() -> tuple[
     )
 
 
-# -----------------------------------------------------------------------------
-# RESULT SECTIONS
-# -----------------------------------------------------------------------------
+def _decision_content(
+    state: ExperimentState,
+    orchestrator_result: dict[str, Any],
+) -> tuple[str, str, str]:
+    if state.status == "preprocessing_config_created_with_pending_approvals":
+        return (
+            "warning",
+            "Action required before training",
+            "The workflow paused because one or more preprocessing decisions need approval.",
+        )
 
-def show_status_cards(state: ExperimentState) -> None:
-    """
-    Show high-level status cards.
-    """
+    if not orchestrator_result.get("success", False):
+        return (
+            "danger",
+            "The run did not complete",
+            str(orchestrator_result.get("error") or "Review the run details and try again."),
+        )
 
+    critic_report = state.critic_report or {}
+    decision = critic_report.get("recommendation_decision")
+    reliability = critic_report.get("overall_reliability", "unknown")
+
+    if decision == "do_not_recommend_model":
+        return (
+            "danger",
+            "Model recommendation withheld",
+            f"Reliability is {reliability}. The current evidence is not strong enough to select or save a model.",
+        )
+
+    if decision == "recommend_with_caution":
+        return (
+            "warning",
+            "Candidate found, further validation required",
+            f"Reliability is {reliability}. Treat the selected model as provisional rather than deployable.",
+        )
+
+    if decision == "recommend_candidate_model":
+        selected = critic_report.get("selected_candidate", {}) or {}
+        return (
+            "success",
+            "Candidate model recommended",
+            f"The critic approved {selected.get('display_name', 'the selected candidate')} with {reliability} reliability.",
+        )
+
+    return (
+        "warning",
+        "Run completed without a final model decision",
+        "Review the workflow status and reliability details before continuing.",
+    )
+
+
+def render_decision_banner(
+    state: ExperimentState,
+    orchestrator_result: dict[str, Any],
+) -> None:
+    tone, title, message = _decision_content(state, orchestrator_result)
+    st.markdown(
+        f"""
+        <div class="decision-banner {tone}">
+            <h2>{_safe_text(title)}</h2>
+            <p>{_safe_text(message)}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _best_leaderboard_item(state: ExperimentState) -> dict[str, Any] | None:
+    best_useful_id = (state.comparison_summary or {}).get("best_useful_model_id")
+
+    if best_useful_id:
+        return next(
+            (item for item in state.leaderboard if item.get("model_id") == best_useful_id),
+            None,
+        )
+
+    return state.leaderboard[0] if state.leaderboard else None
+
+
+def show_status_metrics(state: ExperimentState) -> None:
     critic_report = state.critic_report or {}
     training_summary = state.training_summary or {}
     comparison_summary = state.comparison_summary or {}
-
-    reliability = critic_report.get("overall_reliability", "N/A")
     best_model = comparison_summary.get("best_useful_display_name") or "None"
 
     cols = st.columns(4)
+    cols[0].metric("Task", str(state.task_type or "N/A").replace("_", " ").title())
+    cols[1].metric("Reliability", str(critic_report.get("overall_reliability", "N/A")).title())
+    cols[2].metric("Models completed", training_summary.get("models_completed", 0))
+    cols[3].metric("Best useful model", best_model)
 
-    with cols[0]:
-        render_metric_card(
-            "Current Status",
-            state.status,
-            "Workflow execution state",
+
+def show_leaderboard_chart(state: ExperimentState) -> None:
+    chart_rows = []
+
+    for item in state.leaderboard:
+        score = _format_metric(item.get("primary_score"))
+        dummy_score = _format_metric(item.get("dummy_baseline_score"))
+
+        if score is None:
+            continue
+
+        chart_rows.append(
+            {
+                "Model": item.get("display_name"),
+                "Model score": score,
+                "Dummy baseline": dummy_score,
+            }
         )
 
-    with cols[1]:
-        render_metric_card(
-            "Reliability",
-            reliability,
-            "Critic agent judgement",
-        )
+    if not chart_rows:
+        st.info("No model scores are available to chart.")
+        return
 
-    with cols[2]:
-        render_metric_card(
-            "Models Completed",
-            training_summary.get("models_completed", 0),
-            "Finished training runs",
-        )
-
-    with cols[3]:
-        render_metric_card(
-            "Best Useful Model",
-            best_model,
-            "After dummy baseline check",
-        )
+    chart_df = pd.DataFrame(chart_rows).set_index("Model")
+    st.bar_chart(chart_df, horizontal=True, width="stretch")
+    st.caption("The grey comparison series repeats the dummy score so each model can be judged against the same baseline.")
 
 
-def show_dataset_tab(state: ExperimentState) -> None:
-    """
-    Display dataset profile and quality information.
-    """
+def show_overview_tab(state: ExperimentState) -> None:
+    render_section_title(
+        "Run overview",
+        "The decision, performance evidence, and most important next actions.",
+    )
 
+    best_item = _best_leaderboard_item(state)
+    comparison = state.comparison_summary or {}
+    overview_cols = st.columns(4)
+    overview_cols[0].metric("Primary metric", comparison.get("primary_metric", "N/A"))
+    overview_cols[1].metric(
+        "Candidate score",
+        _display_value(best_item.get("primary_score") if best_item else None),
+    )
+    overview_cols[2].metric(
+        "Dummy score",
+        _display_value(comparison.get("dummy_baseline_score")),
+    )
+    overview_cols[3].metric(
+        "CV variation",
+        _display_value(best_item.get("primary_cv_std") if best_item else None),
+    )
+
+    chart_col, action_col = st.columns([0.62, 0.38], gap="large")
+
+    with chart_col:
+        st.markdown("### Model comparison")
+        show_leaderboard_chart(state)
+
+    with action_col:
+        st.markdown("### Recommended next actions")
+        next_actions = (state.critic_report or {}).get("next_actions", [])
+
+        if not next_actions:
+            st.info("No next actions were recorded.")
+        else:
+            for index, action in enumerate(next_actions, start=1):
+                st.markdown(f"**{index}.** {action}")
+
+    high_priority = [
+        issue
+        for issue in state.quality_issues
+        if str(issue.get("severity", "")).lower() in {"high", "critical"}
+    ]
+
+    if high_priority:
+        st.markdown("### High-priority data concerns")
+        for issue in high_priority[:3]:
+            render_finding(issue, "finding")
+
+
+def show_data_tab(state: ExperimentState) -> None:
     profile = state.profile or {}
+    config = state.preprocessing_config or {}
 
     render_section_title(
-        "Dataset understanding",
-        "A readable summary of what the advisor detected before training models.",
+        "Data and preprocessing",
+        "What the advisor detected and how those columns were prepared for modelling.",
     )
 
     cols = st.columns(4)
+    cols[0].metric("Rows", profile.get("rows", "N/A"))
+    cols[1].metric("Columns", profile.get("columns", "N/A"))
+    cols[2].metric("Features", profile.get("feature_count", "N/A"))
+    cols[3].metric("Duplicate rows", profile.get("duplicate_rows", 0))
 
-    with cols[0]:
-        render_metric_card("Rows", profile.get("rows", "N/A"), "Records used")
+    feature_col, prep_col = st.columns(2, gap="large")
 
-    with cols[1]:
-        render_metric_card("Columns", profile.get("columns", "N/A"), "Raw input columns")
+    with feature_col:
+        with safe_container_with_border():
+            st.markdown("### Detected columns")
+            st.markdown("**Numerical features**")
+            display_tags(profile.get("numerical_columns", []), "No numerical features detected.")
+            st.markdown("**Categorical features**")
+            display_tags(profile.get("categorical_columns", []), "No categorical features detected.")
+            st.markdown("**Possible identifiers**")
+            display_tags(profile.get("possible_id_columns", []), "No likely identifiers detected.")
+            st.markdown("**Possible date columns**")
+            display_tags(profile.get("possible_date_columns", []), "No date-like columns detected.")
 
-    with cols[2]:
-        render_metric_card("Features", profile.get("feature_count", "N/A"), "After selecting target")
+    with prep_col:
+        with safe_container_with_border():
+            st.markdown("### Preprocessing decisions")
+            st.markdown("**Dropped columns**")
+            display_tags(config.get("columns_to_drop", []), "No columns were dropped.")
 
-    with cols[3]:
-        render_metric_card("Task Type", state.task_type or "N/A", "Detected ML problem")
+            missing_strategy = config.get("missing_value_strategy", {})
+            numerical_strategy = missing_strategy.get("numerical", {}).get("strategy", "N/A")
+            categorical_strategy = missing_strategy.get("categorical", {}).get("strategy", "N/A")
+            validation = config.get("validation_strategy", {})
+            metrics = config.get("metric_strategy", {})
 
-    left, right = st.columns(2)
+            st.markdown(f"**Numerical missing values:** {numerical_strategy} imputation")
+            st.markdown(f"**Categorical missing values:** {categorical_strategy} imputation")
+            st.markdown(f"**Validation:** {validation.get('method', 'N/A')}")
+            st.markdown(f"**Primary metric:** {metrics.get('primary_metric', 'N/A')}")
 
-    with left:
-        st.markdown("### Numerical features")
-        display_tags(
-            profile.get("numerical_columns", []),
-            "No numerical features detected.",
-        )
+            approvals = config.get("pending_approvals", [])
+            if approvals:
+                st.warning(f"{len(approvals)} preprocessing approval(s) are still pending.")
+            else:
+                st.success("No preprocessing approvals are pending.")
 
-    with right:
-        st.markdown("### Categorical features")
-        display_tags(
-            profile.get("categorical_columns", []),
-            "No categorical features detected.",
-        )
-
-    st.markdown("### Data quality issues")
-
+    st.markdown("### Data quality findings")
     quality_issues = state.quality_issues or []
-    quality_df = make_quality_dataframe(quality_issues)
 
-    if quality_df.empty:
-        st.success("No major quality issues were recorded by the advisor.")
+    if not quality_issues:
+        st.success("No data quality findings were recorded.")
     else:
-        for issue in quality_issues[:5]:
-            severity = str(issue.get("severity", "info")).lower()
-            tone = reliability_tone(severity)
+        for issue in quality_issues[:6]:
+            render_finding(issue, "finding")
 
-            st.markdown(
-                f"""
-                <div class="finding-card {escape(severity)}">
-                    <h4>
-                        {render_pill(issue.get("severity", "Info"), tone)}
-                        {_safe_text(issue.get("issue", "Data quality issue"))}
-                    </h4>
-                    <p><strong>Finding:</strong> {_safe_text(issue.get("finding", "N/A"))}</p>
-                    <p><strong>Recommendation:</strong> {_safe_text(issue.get("recommendation", "N/A"))}</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+        if len(quality_issues) > 6:
+            with st.expander("View all data quality findings"):
+                st.dataframe(
+                    make_quality_dataframe(quality_issues),
+                    width="stretch",
+                    hide_index=True,
+                )
 
-        with st.expander("View all quality issues as a table"):
-            st.dataframe(
-                quality_df,
-                width="stretch",
-                hide_index=True,
-            )
+    leakage_warnings = state.leakage_warnings or []
+    if leakage_warnings:
+        st.markdown("### Leakage warnings")
+        for warning in leakage_warnings:
+            render_finding(warning, "finding")
+
+    with st.expander("Technical preprocessing configuration", expanded=False):
+        st.json(config)
 
 
-def show_preprocessing_tab(state: ExperimentState) -> None:
-    """
-    Display preprocessing configuration.
-    """
-
+def show_models_tab(state: ExperimentState) -> None:
     render_section_title(
-        "Preprocessing strategy",
-        "How the advisor prepared raw tabular data before model training.",
-    )
-
-    config = state.preprocessing_config or {}
-
-    if not config:
-        st.info("No preprocessing configuration available.")
-        return
-
-    left, right = st.columns(2)
-
-    with left:
-        st.markdown("### Columns dropped")
-        display_tags(
-            config.get("columns_to_drop", []),
-            "No columns were dropped.",
-        )
-
-        st.markdown("### Numerical features")
-        display_tags(
-            config.get("numerical_features", []),
-            "No numerical features recorded.",
-        )
-
-    with right:
-        st.markdown("### Categorical features")
-        display_tags(
-            config.get("categorical_features", []),
-            "No categorical features recorded.",
-        )
-
-        st.markdown("### Pending approvals")
-        display_tags(
-            config.get("pending_approvals", []),
-            "No approvals pending.",
-        )
-
-    with st.expander("Missing value strategy", expanded=True):
-        st.json(config.get("missing_value_strategy", {}))
-
-    with st.expander("Validation and metric strategy", expanded=False):
-        c1, c2 = st.columns(2)
-
-        with c1:
-            st.markdown("#### Validation")
-            st.json(config.get("validation_strategy", {}))
-
-        with c2:
-            st.markdown("#### Metrics")
-            st.json(config.get("metric_strategy", {}))
-
-
-def show_results_tab(state: ExperimentState) -> None:
-    """
-    Display model results and leaderboard.
-    """
-
-    render_section_title(
-        "Model results",
-        "The advisor compares candidate models and checks whether they beat a simple dummy baseline.",
+        "Model evaluation",
+        "Cross-validation results, dummy-baseline comparison, and model-level diagnostics.",
     )
 
     leaderboard_df = make_leaderboard_dataframe(state.leaderboard)
 
     if leaderboard_df.empty:
-        st.info("No leaderboard available.")
-    else:
-        best_row = leaderboard_df.iloc[0]
+        st.info("No leaderboard is available.")
+        return
 
-        c1, c2, c3 = st.columns(3)
+    show_leaderboard_chart(state)
 
-        with c1:
-            render_metric_card(
-                "Top ranked model",
-                best_row.get("Model"),
-                "Highest ranked candidate",
-            )
+    st.markdown("### Leaderboard")
+    st.dataframe(leaderboard_df, width="stretch", hide_index=True)
 
-        with c2:
-            render_metric_card(
-                "Primary score",
-                best_row.get("CV Score"),
-                best_row.get("Metric", "Primary metric"),
-            )
-
-        with c3:
-            render_metric_card(
-                "Reliability",
-                best_row.get("Reliability"),
-                "Model-level judgement",
-            )
-
-        st.markdown("### Leaderboard")
-        st.dataframe(
-            leaderboard_df,
-            width="stretch",
-            hide_index=True,
-        )
-
-    metrics_df = make_training_metrics_dataframe(state.model_results)
-
-    st.markdown("### Training metrics")
-
-    if metrics_df.empty:
-        st.info("No training metrics available.")
-    else:
-        st.dataframe(
-            metrics_df,
-            width="stretch",
-            hide_index=True,
-        )
+    with st.expander("All training metrics", expanded=False):
+        metrics_df = make_training_metrics_dataframe(state.model_results)
+        if metrics_df.empty:
+            st.info("No training metrics are available.")
+        else:
+            st.dataframe(metrics_df, width="stretch", hide_index=True)
 
     st.markdown("### Model diagnostics")
 
-    if not state.model_results:
-        st.info("No model diagnostics available.")
-        return
-
     for result in state.model_results:
-        diagnostics = result.get("classification_diagnostics", {}) or {}
         model_name = result.get("display_name", "Model")
+        primary_score = _display_value(result.get("primary_score"))
 
-        with st.expander(f"Diagnostics: {model_name}", expanded=False):
-            c1, c2 = st.columns(2)
+        with st.expander(f"{model_name} | primary score: {primary_score}", expanded=False):
+            summary_cols = st.columns(4)
+            summary_cols[0].metric("Status", str(result.get("status", "N/A")).title())
+            summary_cols[1].metric("Family", result.get("family", "N/A"))
+            summary_cols[2].metric("Primary metric", result.get("primary_metric", "N/A"))
+            summary_cols[3].metric("Primary score", primary_score)
 
-            with c1:
-                st.markdown(f"**Model ID:** `{result.get('model_id', 'N/A')}`")
+            if result.get("error"):
+                st.error(result["error"])
 
-            with c2:
-                st.markdown(f"**Primary score:** `{_format_metric(result.get('primary_score'))}`")
+            diagnostics = result.get("classification_diagnostics", {}) or {}
+            if not diagnostics:
+                st.caption("No classification diagnostics are available for this model.")
+                continue
 
-            if diagnostics:
-                c1, c2, c3 = st.columns(3)
+            diagnostic_cols = st.columns(3)
+            diagnostic_cols[0].metric("Positive label", diagnostics.get("positive_label", "N/A"))
+            diagnostic_cols[1].metric(
+                "OOF ROC-AUC",
+                _display_value(diagnostics.get("out_of_fold_roc_auc")),
+            )
+            diagnostic_cols[2].metric(
+                "OOF PR-AUC",
+                _display_value(diagnostics.get("out_of_fold_pr_auc")),
+            )
 
-                with c1:
-                    render_metric_card(
-                        "Positive label",
-                        diagnostics.get("positive_label"),
-                        "Classification target",
-                    )
+            matrix = diagnostics.get("confusion_matrix", [])
+            labels = diagnostics.get("labels", [])
 
-                with c2:
-                    render_metric_card(
-                        "OOF ROC-AUC",
-                        _format_metric(diagnostics.get("out_of_fold_roc_auc")),
-                        "Out-of-fold score",
-                    )
+            if matrix:
+                matrix_df = pd.DataFrame(
+                    matrix,
+                    index=[f"Actual {label}" for label in labels],
+                    columns=[f"Predicted {label}" for label in labels],
+                )
+                st.markdown("#### Confusion matrix")
+                st.dataframe(
+                    matrix_df.style.background_gradient(cmap="Blues"),
+                    width="stretch",
+                )
 
-                with c3:
-                    render_metric_card(
-                        "OOF PR-AUC",
-                        _format_metric(diagnostics.get("out_of_fold_pr_auc")),
-                        "Useful for imbalance",
-                    )
-
-                matrix = diagnostics.get("confusion_matrix", [])
-                labels = diagnostics.get("labels", [])
-
-                if matrix:
-                    st.markdown("#### Confusion matrix")
-
-                    matrix_df = pd.DataFrame(
-                        matrix,
-                        index=[f"Actual {label}" for label in labels],
-                        columns=[f"Predicted {label}" for label in labels],
-                    )
-
-                    st.dataframe(matrix_df, width="stretch")
-
-                class_metrics = diagnostics.get("class_level_metrics", {})
-
-                if class_metrics:
-                    st.markdown("#### Class-level metrics")
-
-                    class_df = pd.DataFrame.from_dict(
-                        class_metrics,
-                        orient="index",
-                    )
-
-                    st.dataframe(class_df, width="stretch")
-
-            else:
-                st.info("No classification diagnostics available for this model.")
+            class_metrics = diagnostics.get("class_level_metrics", {})
+            if class_metrics:
+                st.markdown("#### Class-level metrics")
+                st.dataframe(
+                    pd.DataFrame.from_dict(class_metrics, orient="index"),
+                    width="stretch",
+                )
 
 
-def show_critic_tab(state: ExperimentState) -> None:
-    """
-    Display critic report.
-    """
-
+def show_reliability_tab(
+    state: ExperimentState,
+    orchestrator_result: dict[str, Any],
+) -> None:
     render_section_title(
-        "Reliability critic",
-        "The critic agent reviews whether the result is trustworthy enough to continue.",
+        "Reliability review",
+        "Why the advisor accepted, cautioned against, or rejected the current model evidence.",
     )
 
     critic_report = state.critic_report or {}
 
     if not critic_report:
-        st.info("No critic report available.")
-        return
-
-    reliability = critic_report.get("overall_reliability", "N/A")
-    decision = critic_report.get("recommendation_decision", "N/A")
-    can_tune = critic_report.get("can_proceed_to_tuning", "N/A")
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        render_metric_card(
-            "Overall Reliability",
-            reliability,
-            "Final critic judgement",
-        )
-
-    with c2:
-        render_metric_card(
-            "Decision",
-            decision,
-            "Recommended next step",
-        )
-
-    with c3:
-        render_metric_card(
-            "Can Tune?",
-            can_tune,
-            "Whether tuning is sensible",
-        )
-
-    st.markdown("### Critic findings")
-
-    findings = critic_report.get("findings", [])
-
-    if not findings:
-        st.success("No critic findings were reported.")
+        st.info("The workflow did not produce a critic report.")
     else:
-        for finding in findings:
-            severity = str(finding.get("severity", "info")).lower()
-            tone = reliability_tone(severity)
+        cols = st.columns(3)
+        cols[0].metric("Overall reliability", critic_report.get("overall_reliability", "N/A"))
+        cols[1].metric("Decision", critic_report.get("recommendation_decision", "N/A"))
+        cols[2].metric("Can proceed to tuning", critic_report.get("can_proceed_to_tuning", "N/A"))
 
-            st.markdown(
-                f"""
-                <div class="finding-card {escape(severity)}">
-                    <h4>
-                        {render_pill(finding.get("severity", "Info"), tone)}
-                        {_safe_text(finding.get("issue", "Finding"))}
-                    </h4>
-                    <p><strong>Evidence:</strong> {_safe_text(finding.get("evidence", "N/A"))}</p>
-                    <p><strong>Recommendation:</strong> {_safe_text(finding.get("recommendation", "N/A"))}</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+        st.markdown("### Critic findings")
+        findings = critic_report.get("findings", [])
 
-    st.markdown("### Next actions")
+        if not findings:
+            st.success("No critic findings were recorded.")
+        else:
+            for finding in findings:
+                render_finding(finding, "evidence")
 
-    next_actions = critic_report.get("next_actions", [])
+        st.markdown("### Next actions")
+        next_actions = critic_report.get("next_actions", [])
+        for index, action in enumerate(next_actions, start=1):
+            st.markdown(f"**{index}.** {action}")
 
-    if not next_actions:
-        st.info("No next actions were provided.")
-    else:
-        for action in next_actions:
-            st.markdown(f"- {action}")
+    with st.expander("Run details and execution timeline", expanded=False):
+        stop_reason = orchestrator_result.get("stop_reason", "N/A")
+        st.markdown(f"**Final workflow status:** `{state.status}`")
+        st.markdown(f"**Stop reason:** `{stop_reason}`")
+
+        actions = orchestrator_result.get("actions_taken", [])
+        if actions:
+            st.markdown("#### Orchestrator actions")
+            st.dataframe(pd.DataFrame(actions), width="stretch", hide_index=True)
+
+        timeline_df = make_timeline_dataframe(state.tool_history)
+        if not timeline_df.empty:
+            st.markdown("#### Tool timeline")
+            st.dataframe(timeline_df, width="stretch", hide_index=True)
 
 
 def show_report_tab(state: ExperimentState) -> None:
-    """
-    Display final report and download button.
-    """
-
     render_section_title(
-        "Final advisor report",
-        "Download or preview the Markdown report generated from the completed workflow.",
+        "Final report",
+        "Download the experiment record or inspect the generated Markdown report.",
     )
 
-    report_path = state.final_report_path
-
-    if not report_path:
-        st.info("No final report path available.")
+    if not state.final_report_path:
+        st.info("No final report was created for this run.")
         return
 
-    path = Path(report_path)
-
+    path = Path(state.final_report_path)
     if not path.exists():
-        st.warning(f"Report path was recorded, but file was not found: {report_path}")
+        st.warning(f"The report was recorded but could not be found at {state.final_report_path}.")
         return
 
     report_text = path.read_text(encoding="utf-8")
-
     st.download_button(
-        label="Download final_report.md",
+        "Download report",
         data=report_text,
-        file_name="final_report.md",
+        file_name="automl_advisor_report.md",
         mime="text/markdown",
-        width="stretch",
+        type="primary",
+        key="download_final_automl_report",
     )
 
-    with st.expander("Preview final report", expanded=True):
+    with st.expander("Preview report", expanded=False):
         st.markdown(report_text)
-
-
-def show_timeline_tab(state: ExperimentState) -> None:
-    """
-    Display tool execution timeline.
-    """
-
-    render_section_title(
-        "Agent execution timeline",
-        "A transparent trace of the tools and agents that ran during this workflow.",
-    )
-
-    timeline_df = make_timeline_dataframe(state.tool_history)
-
-    if timeline_df.empty:
-        st.info("No tool history available.")
-    else:
-        st.dataframe(
-            timeline_df,
-            width="stretch",
-            hide_index=True,
-        )
 
 
 def show_results_dashboard(
     state: ExperimentState,
     orchestrator_result: dict[str, Any],
 ) -> None:
-    """
-    Render the completed experiment dashboard.
-    """
-
-    st.divider()
-
+    render_agent_workflow(state)
     render_section_title(
-        "Advisor run completed",
-        "Review the experiment summary, model performance, critic judgement, and final report.",
+        "Experiment result",
+        "Recommendation and supporting evidence.",
     )
+    render_decision_banner(state, orchestrator_result)
+    show_status_metrics(state)
 
-    show_workflow_stepper(done=True)
-
-    show_status_cards(state)
-
-    success = orchestrator_result.get("success", False)
-    stop_reason = orchestrator_result.get("stop_reason", "N/A")
-    tone = "green" if success else "red"
-
-    st.markdown(
-        f"""
-        <div class="callout">
-            <p>
-                {render_pill("Success" if success else "Not successful", tone)}
-                &nbsp; <strong>Stop reason:</strong> {_safe_text(stop_reason)}
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    with st.expander("Actions taken by the orchestrator", expanded=False):
-        actions_taken = orchestrator_result.get("actions_taken", [])
-
-        if actions_taken:
-            st.dataframe(
-                pd.DataFrame(actions_taken),
-                width="stretch",
-                hide_index=True,
-            )
-        else:
-            st.info("No orchestrator actions were recorded.")
-
-    tabs = st.tabs(
-        [
-            "📊 Dataset",
-            "🧹 Preprocessing",
-            "🏆 Results",
-            "🛡️ Critic",
-            "📄 Final Report",
-            "🧭 Timeline",
-        ]
-    )
+    tabs = st.tabs(["Overview", "Data", "Models", "Reliability", "Report"])
 
     with tabs[0]:
-        show_dataset_tab(state)
+        show_overview_tab(state)
 
     with tabs[1]:
-        show_preprocessing_tab(state)
+        show_data_tab(state)
 
     with tabs[2]:
-        show_results_tab(state)
+        show_models_tab(state)
 
     with tabs[3]:
-        show_critic_tab(state)
+        show_reliability_tab(state, orchestrator_result)
 
     with tabs[4]:
         show_report_tab(state)
 
-    with tabs[5]:
-        show_timeline_tab(state)
 
+def _show_run_message(state: ExperimentState, orchestrator_result: dict[str, Any]) -> None:
+    if not orchestrator_result.get("success", False):
+        st.error(f"Workflow failed: {orchestrator_result.get('error') or state.status}")
+    elif state.status == "preprocessing_config_created_with_pending_approvals":
+        st.warning("Workflow paused because preprocessing approval is required.")
+    elif state.status == "final_report_created":
+        st.success("Analysis completed. Review the recommendation and supporting evidence below.")
+    else:
+        st.info(f"Workflow stopped with status: {state.status}")
 
-# -----------------------------------------------------------------------------
-# MAIN APP
-# -----------------------------------------------------------------------------
 
 def main() -> None:
     inject_css()
-    show_sidebar_guide()
-    show_hero()
-    show_agent_cards()
-    show_workflow_stepper(done=False, active_index=1)
+    show_sidebar_help()
+    render_header()
+
+    if "last_state" in st.session_state:
+        _, new_experiment_col = st.columns([0.82, 0.18])
+        with new_experiment_col:
+            if st.button("← New experiment", width="stretch"):
+                for key in [
+                    "last_state",
+                    "last_orchestrator_result",
+                    "dataset_upload",
+                    "sample_objective",
+                    "upload_objective",
+                    "dataset_source",
+                ]:
+                    st.session_state.pop(key, None)
+                st.rerun()
+
+        show_results_dashboard(
+            st.session_state["last_state"],
+            st.session_state["last_orchestrator_result"],
+        )
+        return
 
     (
         df_preview,
@@ -1648,73 +2779,72 @@ def main() -> None:
         user_objective,
         approve_drop_id_columns,
         run_button,
-    ) = show_setup_panel()
-
-    if df_preview is not None:
-        with st.expander("Preview first 20 rows", expanded=False):
-            st.dataframe(
-                df_preview.head(20),
-                width="stretch",
-                hide_index=True,
-            )
+    ) = show_setup_workbench()
 
     if run_button:
         if df_preview is None or target_column is None:
-            st.error("Please load a dataset and select a target column before running the advisor.")
+            st.error("Load a dataset and select a target before running the advisor.")
             return
 
-        with st.spinner(
-            "The agents are inspecting, planning, training, critiquing, and reporting..."
-        ):
-            try:
-                if dataset_path_for_run:
-                    final_dataset_path = dataset_path_for_run
-                else:
-                    final_dataset_path = _save_uploaded_file(uploaded_file)
+        run_status = st.status("Agents are preparing the experiment...", expanded=True)
+        progress_bar = st.progress(0, text="Preparing controlled workflow")
 
-                state = ExperimentState(
-                    dataset_path=final_dataset_path,
-                    target_column=target_column,
-                    user_objective=user_objective,
+        def update_run_progress(event: dict[str, Any]) -> None:
+            action = str(event.get("action", ""))
+            phase = str(event.get("phase", ""))
+            step_number = min(int(event.get("step_number", 1)), len(ACTION_LABELS))
+            label = ACTION_LABELS.get(action, action.replace("_", " ").title())
+
+            if phase == "started" and action in ACTION_LABELS:
+                progress_bar.progress(
+                    max(0, step_number - 1) / len(ACTION_LABELS),
+                    text=f"Step {step_number} of {len(ACTION_LABELS)} · {label}",
                 )
-
-                state.completed_steps.append("created_experiment_state")
-
-                orchestrator_result = run_orchestrator(
-                    state=state,
-                    approve_drop_id_columns=approve_drop_id_columns,
+                run_status.update(label=label, state="running", expanded=True)
+            elif phase == "completed" and action in ACTION_LABELS:
+                progress_bar.progress(
+                    step_number / len(ACTION_LABELS),
+                    text=f"Step {step_number} of {len(ACTION_LABELS)} complete",
                 )
+                run_status.write(f"✓ {label}")
 
-                state = orchestrator_result["state"]
+        try:
+            final_dataset_path = (
+                dataset_path_for_run
+                if dataset_path_for_run
+                else _save_uploaded_file(uploaded_file)
+            )
 
-                save_state(state, "outputs/reports/experiment_state.json")
+            state = ExperimentState(
+                dataset_path=final_dataset_path,
+                target_column=target_column,
+                user_objective=user_objective,
+            )
+            state.completed_steps.append("created_experiment_state")
 
-                st.session_state["last_state"] = state
-                st.session_state["last_orchestrator_result"] = orchestrator_result
+            orchestrator_result = run_orchestrator(
+                state=state,
+                approve_drop_id_columns=approve_drop_id_columns,
+                progress_callback=update_run_progress,
+            )
+            state = orchestrator_result["state"]
+            save_state(state, "outputs/reports/experiment_state.json")
 
-                st.success(f"Workflow completed with status: {state.status}")
+            if state.status == "final_report_created":
+                progress_bar.progress(1.0, text="All ten agent steps complete")
+                run_status.update(label="Analysis completed", state="complete", expanded=False)
+            elif state.status == "preprocessing_config_created_with_pending_approvals":
+                run_status.update(label="Analysis paused for approval", state="error", expanded=True)
+            else:
+                run_status.update(label="Analysis stopped", state="error", expanded=True)
 
-            except Exception as error:
-                st.error(f"Workflow failed: {error}")
+            st.session_state["last_state"] = state
+            st.session_state["last_orchestrator_result"] = orchestrator_result
+            st.rerun()
 
-    if "last_state" in st.session_state:
-        show_results_dashboard(
-            st.session_state["last_state"],
-            st.session_state["last_orchestrator_result"],
-        )
-    else:
-        st.markdown(
-            """
-            <div class="callout">
-                <p>
-                    <strong>Ready when you are.</strong> Load a dataset above, choose the target column,
-                    and click <strong>Run Agentic AutoML Advisor</strong> to start the workflow.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
+        except Exception as error:
+            run_status.update(label="Analysis failed", state="error", expanded=True)
+            st.error(f"Workflow failed: {error}")
 
 if __name__ == "__main__":
     main()
