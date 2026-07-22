@@ -43,3 +43,5 @@ data/raw/
 *.tmp
 *.bak
 .streamlit/
+
+data/sample

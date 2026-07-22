@@ -371,9 +371,15 @@ def critic_agent(state: ExperimentState) -> dict[str, Any]:
     )
 
     try:
-        if state.status != "model_comparison_completed":
+        allowed_statuses = {
+            "model_comparison_completed",
+            "holdout_evaluation_completed",
+        }
+
+        if state.status not in allowed_statuses:
             raise ValueError(
-                "Cannot run critic before model comparison is completed."
+                "Cannot run reliability critique before model comparison and the "
+                "final holdout evaluation check are completed."
             )
 
         if not state.leaderboard:

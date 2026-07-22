@@ -300,6 +300,62 @@ def _format_tool_history(tool_history: list[dict[str, Any]]) -> str:
 
     return "\n".join(lines)
 
+def _format_holdout_result(result: dict[str, Any]) -> str:
+    """
+    Format the final holdout evaluation result.
+    """
+
+    if not result:
+        return "No final holdout evaluation result was recorded."
+
+    lines = []
+
+    lines.append(f"- **Status:** {result.get('status')}")
+    lines.append(f"- **Holdout used:** {result.get('holdout_used')}")
+    lines.append(f"- **Reason:** {result.get('reason')}")
+
+    if result.get("model_id"):
+        lines.append(f"- **Model:** {result.get('display_name')}")
+        lines.append(f"- **Model ID:** {result.get('model_id')}")
+        lines.append(
+            f"- **Training rows:** {result.get('training_rows')}"
+        )
+        lines.append(
+            f"- **Holdout rows:** {result.get('holdout_rows')}"
+        )
+        lines.append(
+            f"- **Primary metric:** {result.get('primary_metric')}"
+        )
+        lines.append(
+            f"- **Cross-validation score:** "
+            f"{result.get('cv_primary_score')}"
+        )
+        lines.append(
+            f"- **Holdout score:** "
+            f"{result.get('holdout_primary_score')}"
+        )
+        lines.append(
+            f"- **Passed holdout guardrail:** "
+            f"{result.get('passes_holdout_guardrail')}"
+        )
+        lines.append(
+            f"- **Guardrail explanation:** "
+            f"{result.get('guardrail_reason')}"
+        )
+
+    metrics = result.get("metrics", {})
+
+    if metrics:
+        lines.append("")
+        lines.append("| Holdout Metric | Value |")
+        lines.append("|---|---:|")
+
+        for metric_name, metric_value in metrics.items():
+            lines.append(
+                f"| {metric_name} | {metric_value} |"
+            )
+
+    return "\n".join(lines)
 
 def create_final_report_summary(state: ExperimentState) -> dict[str, Any]:
     """
@@ -500,6 +556,13 @@ def create_final_report_markdown(state: ExperimentState) -> str:
 
     lines.append("")
 
+    lines.append("## Final Holdout Evaluation")
+    lines.append("")
+    lines.append(_format_holdout_result(state.holdout_result))
+    lines.append("")
+
+    
+
     unsupported_metrics = training_summary.get("unsupported_metrics_in_first_trainer", [])
 
     if unsupported_metrics:
@@ -507,6 +570,7 @@ def create_final_report_markdown(state: ExperimentState) -> str:
         lines.append("")
         lines.append(_format_list(unsupported_metrics))
         lines.append("")
+
 
     lines.append("# 8. Model Results")
     lines.append("")

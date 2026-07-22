@@ -5,6 +5,7 @@ from src.agents.critic_agent import critic_agent
 from src.agents.planner_agent import planner_agent
 from src.state import ExperimentState
 from src.tools.inspection_tool import inspect_dataset_tool
+from src.tools.holdout_evaluation_tool import holdout_evaluation_tool
 from src.tools.model_comparison_tool import model_comparison_tool
 from src.tools.model_registry_tool import model_registry_tool
 from src.tools.preprocessing_pipeline_tool import preprocessing_pipeline_tool
@@ -24,6 +25,7 @@ TERMINAL_STATUSES = {
     "model_registry_failed",
     "baseline_training_failed",
     "model_comparison_failed",
+    "holdout_evaluation_failed",
     "reliability_critique_failed",
     "final_report_failed",
     "model_persistence_failed",
@@ -78,6 +80,9 @@ def _get_next_action(state: ExperimentState) -> str:
         return "compare_models"
 
     if state.status == "model_comparison_completed":
+        return "evaluate_final_holdout"
+
+    if state.status == "holdout_evaluation_completed":
         return "run_reliability_critic"
 
     if state.status == "reliability_critique_completed":
@@ -124,6 +129,12 @@ def _run_action(
 
     if action == "compare_models":
         return model_comparison_tool(state)
+
+    if action == "evaluate_final_holdout":
+        return holdout_evaluation_tool(state)
+
+    if action == "run_reliability_critic":
+        return critic_agent(state)
 
     if action == "run_reliability_critic":
         return critic_agent(state)

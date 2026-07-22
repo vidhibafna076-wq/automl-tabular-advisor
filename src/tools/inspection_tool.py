@@ -149,7 +149,7 @@ def inspect_dataset_tool(state: ExperimentState) -> dict[str, Any]:
             tool_name=tool_name,
             status="success",
             message=
-                f"Generated data quality report with {len(quality_issues)} issue(s)."
+                f"Generated data quality report with {len(quality_issues)} issue(s) "
                 f"and {len(leakage_warnings)} leakage warning(s)."
         )
 
