@@ -45,3 +45,16 @@ data/raw/
 .streamlit/
 
 data/sample
+data/processed
+data/interim
+data/external
+data/outputs
+data/figures
+data/models
+data/reports
+data/visualizations
+outputs/reports
+outputs/models
+outputs/figures
+outputs/figures/plots
+outputs/predictions
