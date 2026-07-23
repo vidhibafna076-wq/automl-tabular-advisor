@@ -51,6 +51,8 @@ class ExperimentState:
     feature_importance_summary: dict[str, Any] = field(default_factory=dict)
     validation_summary: dict[str, Any] = field(default_factory=dict)
     holdout_result: dict[str, Any] = field(default_factory=dict)
+    tuning_summary: dict[str, Any] = field(default_factory=dict)
+    tuning_result: dict[str, Any] = field(default_factory=dict)
     final_report_path: str | None = None
     final_report_summary: dict[str, Any] = field(default_factory=dict)
 
