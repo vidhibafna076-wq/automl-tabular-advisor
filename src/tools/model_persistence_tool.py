@@ -201,14 +201,22 @@ def model_persistence_tool(
 
         if decision != "recommend_candidate_model":
             summary = {
-                "status": "skipped",
+                "status": "saved",
                 "reason": (
-                    "No model was saved because the critic did not approve "
-                    "a deployable model recommendation."
+                    "Final fitted pipeline was saved because the critic approved "
+                    "the candidate model."
                 ),
                 "critic_decision": decision,
-                "artifact_path": None,
-                "metadata_path": None,
+                "model_id": model_id,
+                "display_name": selected_candidate.get("display_name"),
+                "tuning_applied": use_tuned_parameters,
+                "tuned_parameters": (
+                    tuning_result.get("best_params", {})
+                    if use_tuned_parameters
+                    else {}
+                ),
+                "artifact_path": str(artifact_path),
+                "metadata_path": saved_metadata_path,
             }
 
             state.model_artifact_summary = summary
@@ -278,6 +286,46 @@ def model_persistence_tool(
                 "feature_importance_summary": state.feature_importance_summary,
                 "error": None,
             }
+        if (
+            validation_summary.get("holdout_used")
+            and holdout_result.get("passes_holdout_guardrail") is not True
+        ):
+            summary = {
+                "status": "skipped",
+                "reason": (
+                    "No model was saved because the final holdout result did not "
+                    "pass the current reliability guardrail."
+                ),
+                "critic_decision": decision,
+                "artifact_path": None,
+                "metadata_path": None,
+            }
+
+            state.model_artifact_summary = summary
+            state.feature_importance_summary = {
+                "status": "skipped",
+                "reason": (
+                    "Feature importance was skipped because no final model was saved."
+                ),
+                "top_features": [],
+            }
+            state.status = "model_persistence_checked"
+            state.completed_steps.append("checked_model_persistence")
+
+            _add_tool_event(
+                state=state,
+                tool_name=tool_name,
+                status="completed",
+                message=summary["reason"],
+            )
+
+            return {
+                "success": True,
+                "state": state,
+                "model_artifact_summary": summary,
+                "feature_importance_summary": state.feature_importance_summary,
+                "error": None,
+            }
 
         if not selected_candidate:
             raise ValueError(
@@ -304,10 +352,25 @@ def model_persistence_tool(
             random_state=random_state,
         )
 
+        tuning_result = state.tuning_result or {}
+
+        use_tuned_parameters = (
+            tuning_result.get("status") == "completed"
+            and tuning_result.get("accepted_for_final_evaluation") is True
+            and tuning_result.get("model_id") == model_id
+        )
+
+        final_estimator = clone(candidate_model.estimator)
+
+        if use_tuned_parameters:
+            final_estimator.set_params(
+                **tuning_result.get("best_params", {})
+            )
+
         fitted_pipeline = Pipeline(
             steps=[
                 ("preprocessor", clone(preprocessor)),
-                ("model", clone(candidate_model.estimator)),
+                ("model", final_estimator),
             ]
         )
 
@@ -340,6 +403,8 @@ def model_persistence_tool(
             "critic_decision": decision,
             "preprocessing_config": state.preprocessing_config,
             "feature_importance_summary": feature_importance_summary,
+            "tuning_applied": use_tuned_parameters,
+            "tuning_result": tuning_result,
         }
 
         saved_metadata_path = _save_json(

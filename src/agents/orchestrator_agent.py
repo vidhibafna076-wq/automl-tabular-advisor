@@ -13,6 +13,7 @@ from src.tools.preprocessing_plan_tool import preprocessing_plan_tool
 from src.tools.report_tool import final_report_tool
 from src.tools.training_tool import baseline_training_tool
 from src.tools.model_persistence_tool import model_persistence_tool
+from src.tools.tuning_tool import tuning_tool
 
 
 TERMINAL_STATUSES = {
@@ -29,6 +30,7 @@ TERMINAL_STATUSES = {
     "reliability_critique_failed",
     "final_report_failed",
     "model_persistence_failed",
+    "tuning_failed",
 }
 
 
@@ -80,6 +82,9 @@ def _get_next_action(state: ExperimentState) -> str:
         return "compare_models"
 
     if state.status == "model_comparison_completed":
+        return "run_guarded_tuning"
+
+    if state.status == "tuning_completed":
         return "evaluate_final_holdout"
 
     if state.status == "holdout_evaluation_completed":
@@ -129,6 +134,13 @@ def _run_action(
 
     if action == "compare_models":
         return model_comparison_tool(state)
+
+    if action == "run_guarded_tuning":
+        return tuning_tool(
+            state=state,
+            max_trials=12,
+            timeout_seconds=180,
+        )
 
     if action == "evaluate_final_holdout":
         return holdout_evaluation_tool(state)

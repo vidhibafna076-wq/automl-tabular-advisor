@@ -357,6 +357,87 @@ def _format_holdout_result(result: dict[str, Any]) -> str:
 
     return "\n".join(lines)
 
+def _format_tuning_result(
+    summary: dict[str, Any],
+    result: dict[str, Any],
+) -> str:
+    """
+    Format the guarded tuning decision and result.
+    """
+
+    if not summary and not result:
+        return "No guarded tuning decision was recorded."
+
+    lines = []
+
+    lines.append(
+        f"- **Eligible:** {summary.get('eligible')}"
+    )
+    lines.append(
+        f"- **Eligibility reason:** {summary.get('reason')}"
+    )
+
+    blocking_reasons = summary.get(
+        "blocking_reasons",
+        [],
+    )
+
+    if blocking_reasons:
+        lines.append("")
+        lines.append("### Blocking Reasons")
+        lines.append("")
+        lines.append(_format_list(blocking_reasons))
+
+    if result:
+        lines.append("")
+        lines.append(
+            f"- **Tuning status:** {result.get('status')}"
+        )
+        lines.append(
+            f"- **Model:** {result.get('display_name')}"
+        )
+        lines.append(
+            f"- **Primary metric:** "
+            f"{result.get('primary_metric')}"
+        )
+        lines.append(
+            f"- **Baseline CV score:** "
+            f"{result.get('baseline_cv_score')}"
+        )
+        lines.append(
+            f"- **Tuned CV score:** "
+            f"{result.get('tuned_cv_score')}"
+        )
+        lines.append(
+            f"- **Improvement:** {result.get('improvement')}"
+        )
+        lines.append(
+            f"- **Accepted for final evaluation:** "
+            f"{result.get('accepted_for_final_evaluation')}"
+        )
+        lines.append(
+            f"- **Successful trials:** "
+            f"{result.get('trials_completed')}"
+        )
+        lines.append(
+            f"- **Duration seconds:** "
+            f"{result.get('duration_seconds')}"
+        )
+        lines.append(
+            f"- **Holdout used during tuning:** "
+            f"{result.get('holdout_used_during_tuning')}"
+        )
+
+        best_params = result.get("best_params", {})
+
+        if best_params:
+            lines.append("")
+            lines.append("### Best Parameters")
+            lines.append("")
+            lines.append(_format_key_value_dict(best_params))
+
+    return "\n".join(lines)
+
 def create_final_report_summary(state: ExperimentState) -> dict[str, Any]:
     """
     Create a short JSON-safe report summary.
@@ -554,6 +635,16 @@ def create_final_report_markdown(state: ExperimentState) -> str:
             "No validation strategy summary was recorded."
         )
 
+    lines.append("")
+
+    lines.append("## Guarded Hyperparameter Tuning")
+    lines.append("")
+    lines.append(
+        _format_tuning_result(
+            state.tuning_summary,
+            state.tuning_result,
+        )
+    )
     lines.append("")
 
     lines.append("## Final Holdout Evaluation")

@@ -358,9 +358,15 @@ def holdout_evaluation_tool(
     )
 
     try:
-        if state.status != "model_comparison_completed":
+        allowed_statuses = {
+            "model_comparison_completed",
+            "tuning_completed",
+        }
+
+        if state.status not in allowed_statuses:
             raise ValueError(
-                "Cannot evaluate the final holdout before model comparison is completed."
+                "Cannot evaluate the final holdout before model comparison and "
+                "guarded tuning are completed."
             )
 
         validation_summary = state.validation_summary or {}
@@ -504,10 +510,25 @@ def holdout_evaluation_tool(
             random_state=random_state,
         )
 
+        tuning_result = state.tuning_result or {}
+
+        use_tuned_parameters = (
+            tuning_result.get("status") == "completed"
+            and tuning_result.get("accepted_for_final_evaluation") is True
+            and tuning_result.get("model_id") == model_id
+        )
+
+        final_estimator = clone(candidate_model.estimator)
+
+        if use_tuned_parameters:
+            final_estimator.set_params(
+                **tuning_result.get("best_params", {})
+            )
+
         fitted_pipeline = Pipeline(
             steps=[
                 ("preprocessor", clone(preprocessor)),
-                ("model", clone(candidate_model.estimator)),
+                ("model", final_estimator),
             ]
         )
 
@@ -543,9 +564,14 @@ def holdout_evaluation_tool(
             or candidate_summary.get("primary_metric")
         )
 
-        cv_primary_score = _safe_float(
-            candidate_summary.get("primary_score")
-        )
+        if use_tuned_parameters:
+            cv_primary_score = _safe_float(
+                tuning_result.get("tuned_cv_score")
+            )
+        else:
+            cv_primary_score = _safe_float(
+                candidate_summary.get("primary_score")
+            )
 
         holdout_primary_score = _safe_float(
             evaluation.get("metrics", {}).get(primary_metric)
@@ -585,6 +611,16 @@ def holdout_evaluation_tool(
             "reason": (
                 "The selected useful candidate was fitted on the training "
                 "portion and evaluated once on the untouched holdout."
+            ),
+
+            "used_tuned_parameters": use_tuned_parameters,
+            "tuned_parameters": (
+                tuning_result.get("best_params", {})
+                if use_tuned_parameters
+                else {}
+            ),
+            "baseline_cv_score": _safe_float(
+                tuning_result.get("baseline_cv_score")
             ),
         }
 
