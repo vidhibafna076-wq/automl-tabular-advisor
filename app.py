@@ -28,8 +28,6 @@ WORKFLOW_STEPS: list[tuple[str, str]] = [
     ("Registry", "created_model_registry"),
     ("Train", "trained_baseline_models"),
     ("Compare", "created_model_leaderboard"),
-    ("Tune", "__tuning__"),
-    ("Holdout", "__holdout__"),
     ("Critique", "created_critic_report"),
     ("Persist", "checked_model_persistence"),
     ("Report", "created_final_report"),
@@ -43,8 +41,6 @@ ACTION_LABELS = {
     "create_model_registry": "Preparing model registry",
     "train_baseline_models": "Training baseline models",
     "compare_models": "Comparing model evidence",
-    "run_guarded_tuning": "Running guarded tuning",
-    "evaluate_final_holdout": "Evaluating final holdout",
     "run_reliability_critic": "Reviewing reliability",
     "check_model_persistence": "Checking model persistence",
     "create_final_report": "Creating final report",
@@ -647,7 +643,7 @@ def inject_css() -> None:
 
             .workflow-header strong { font-size: 0.72rem; }
             .workflow-header span { color: var(--muted) !important; font-size: 0.6rem; }
-            .workflow-track { position: relative; display: grid; grid-template-columns: repeat(12, minmax(64px, 1fr)); min-width: 900px; }
+            .workflow-track { position: relative; display: grid; grid-template-columns: repeat(10, 1fr); min-width: 700px; }
             .workflow-track::before { content: ""; position: absolute; top: 12px; left: 4%; right: 4%; height: 1px; background: var(--border-bright); }
             .workflow-step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.42rem; color: #65758a !important; }
             .workflow-step b { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--border-bright); border-radius: 50%; background: #0b1421; color: inherit !important; font-size: 0.58rem; font-weight: 650; }
@@ -828,135 +824,39 @@ def render_header() -> None:
         unsafe_allow_html=True,
     )
 
-def _workflow_step_is_complete(
-    state: ExperimentState | None,
-    marker: str,
-) -> bool:
-    """
-    Determine whether one visible workflow stage has completed.
 
-    Most stages use markers from state.completed_steps. Tuning and holdout
-    use their structured result dictionaries because they may complete by
-    either running or being safely skipped.
-    """
+def render_agent_workflow(state: ExperimentState | None = None) -> None:
+    """Render the controlled ten-step workflow as a compact visual rail."""
 
-    if state is None:
-        return False
-
-    completed_steps = set(state.completed_steps or [])
-
-    if marker == "__tuning__":
-        tuning_result = getattr(
-            state,
-            "tuning_result",
-            {},
-        ) or {}
-
-        downstream_statuses = {
-            "tuning_completed",
-            "holdout_evaluation_completed",
-            "reliability_critique_completed",
-            "model_persistence_checked",
-            "final_report_created",
-        }
-
-        return bool(tuning_result) or state.status in downstream_statuses
-
-    if marker == "__holdout__":
-        holdout_result = getattr(
-            state,
-            "holdout_result",
-            {},
-        ) or {}
-
-        downstream_statuses = {
-            "holdout_evaluation_completed",
-            "reliability_critique_completed",
-            "model_persistence_checked",
-            "final_report_created",
-        }
-
-        return bool(holdout_result) or state.status in downstream_statuses
-
-    return marker in completed_steps
-
-def render_agent_workflow(
-    state: ExperimentState | None = None,
-) -> None:
-    """
-    Render the controlled twelve-stage workflow as a compact visual rail.
-    """
-
-    completed_flags = [
-        _workflow_step_is_complete(
-            state=state,
-            marker=marker,
-        )
-        for _, marker in WORKFLOW_STEPS
-    ]
-
-    completed_count = sum(completed_flags)
-
-    current_index = min(
-        completed_count,
-        len(WORKFLOW_STEPS) - 1,
-    )
+    completed = set(state.completed_steps if state else [])
+    completed_count = sum(marker in completed for _, marker in WORKFLOW_STEPS)
+    current_index = min(completed_count, len(WORKFLOW_STEPS) - 1)
 
     steps_html = []
-
-    for index, ((label, _), is_complete) in enumerate(
-        zip(
-            WORKFLOW_STEPS,
-            completed_flags,
-        )
-    ):
-        is_current = (
-            state is not None
-            and not is_complete
-            and index == current_index
-        )
-
-        if is_complete:
-            state_class = "complete"
-        elif is_current:
-            state_class = "current"
-        else:
-            state_class = ""
-
-        marker_text = (
-            "&#10003;"
-            if is_complete
-            else str(index + 1)
-        )
-
+    for index, (label, marker) in enumerate(WORKFLOW_STEPS):
+        is_complete = marker in completed
+        is_current = state is not None and not is_complete and index == current_index
+        state_class = "complete" if is_complete else "current" if is_current else ""
+        marker_text = "&#10003;" if is_complete else str(index + 1)
         steps_html.append(
             f'<div class="workflow-step {state_class}">'
-            f'<b>{marker_text}</b>'
-            f'<small>{_safe_text(label)}</small>'
-            f"</div>"
+            f'<b>{marker_text}</b><small>{_safe_text(label)}</small></div>'
         )
 
-    status_text = (
-        f"{completed_count} of "
-        f"{len(WORKFLOW_STEPS)} complete"
-        if state
-        else "Ready"
-    )
-
+    status_text = f"{completed_count} of {len(WORKFLOW_STEPS)} complete" if state else "Ready"
     st.markdown(
         f"""
         <div class="workflow-shell">
             <div class="workflow-header">
-                <strong>Controlled workflow</strong>
+                <strong>Agent workflow</strong>
                 <span>{status_text}</span>
             </div>
-            <div class="workflow-track">
-                {''.join(steps_html)}
-            </div>
+            <div class="workflow-track">{''.join(steps_html)}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
 
 def render_dataset_strip(df: pd.DataFrame, target_column: str | None) -> None:
     """Show only the dataset facts needed before a run."""
@@ -1142,7 +1042,7 @@ def show_setup_workbench() -> tuple[
             </div>
             <div class="agent-ready">
                 <div class="agent-orbit"></div>
-                <div><strong>12 agents ready</strong><small>Controlled workflow</small></div>
+                <div><strong>10 agents ready</strong><small>Controlled workflow</small></div>
             </div>
         </div>
         """,
@@ -2084,7 +1984,7 @@ def main() -> None:
             save_state(state, "outputs/reports/experiment_state.json")
 
             if state.status == "final_report_created":
-                progress_bar.progress(1.0, text = f"All {len(ACTION_LABELS)} workflow steps complete")
+                progress_bar.progress(1.0, text="All ten agent steps complete")
                 run_status.update(label="Analysis completed", state="complete", expanded=False)
             elif state.status == "preprocessing_config_created_with_pending_approvals":
                 run_status.update(label="Analysis paused for approval", state="error", expanded=True)
