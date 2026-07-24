@@ -200,33 +200,53 @@ def model_persistence_tool(
         selected_candidate = critic_report.get("selected_candidate")
 
         if decision != "recommend_candidate_model":
+            skipped_candidate = selected_candidate or {}
+
+            if decision == "recommend_with_caution":
+                skip_reason = (
+                    "No model was saved because the critic recommended the "
+                    "candidate with caution rather than approving it for persistence."
+                )
+            elif decision == "do_not_recommend_model":
+                skip_reason = (
+                    "No model was saved because the critic determined that the "
+                    "current evidence does not justify recommending a model."
+                )
+            else:
+                skip_reason = (
+                    "No model was saved because the critic did not approve "
+                    "a candidate model for persistence."
+                )
+
             summary = {
-                "status": "saved",
-                "reason": (
-                    "Final fitted pipeline was saved because the critic approved "
-                    "the candidate model."
-                ),
+                "status": "skipped",
+                "reason": skip_reason,
                 "critic_decision": decision,
-                "model_id": model_id,
-                "display_name": selected_candidate.get("display_name"),
-                "tuning_applied": use_tuned_parameters,
-                "tuned_parameters": (
-                    tuning_result.get("best_params", {})
-                    if use_tuned_parameters
-                    else {}
+                "model_id": skipped_candidate.get("model_id"),
+                "display_name": skipped_candidate.get("display_name"),
+                "tuning_applied": False,
+                "tuned_parameters": {},
+                "artifact_path": None,
+                "metadata_path": None,
+            }
+
+            feature_importance_summary = {
+                "status": "skipped",
+                "reason": (
+                    "Feature importance was skipped because no final model "
+                    "was saved."
                 ),
-                "artifact_path": str(artifact_path),
-                "metadata_path": saved_metadata_path,
+                "top_features": [],
             }
 
             state.model_artifact_summary = summary
-            state.feature_importance_summary = {
-                "status": "skipped",
-                "reason": "Feature importance was skipped because no final model was saved.",
-                "top_features": [],
-            }
+            state.feature_importance_summary = (
+                feature_importance_summary
+            )
             state.status = "model_persistence_checked"
-            state.completed_steps.append("checked_model_persistence")
+            state.completed_steps.append(
+                "checked_model_persistence"
+            )
 
             _add_tool_event(
                 state=state,
@@ -239,7 +259,9 @@ def model_persistence_tool(
                 "success": True,
                 "state": state,
                 "model_artifact_summary": summary,
-                "feature_importance_summary": state.feature_importance_summary,
+                "feature_importance_summary": (
+                    feature_importance_summary
+                ),
                 "error": None,
             }
         
@@ -414,10 +436,19 @@ def model_persistence_tool(
 
         summary = {
             "status": "saved",
-            "reason": "Final fitted pipeline was saved because the critic approved the candidate model.",
+            "reason": (
+                "Final fitted pipeline was saved because the critic approved "
+                "the candidate model."
+            ),
             "critic_decision": decision,
             "model_id": model_id,
             "display_name": selected_candidate.get("display_name"),
+            "tuning_applied": use_tuned_parameters,
+            "tuned_parameters": (
+                tuning_result.get("best_params", {})
+                if use_tuned_parameters
+                else {}
+            ),
             "artifact_path": str(artifact_path),
             "metadata_path": saved_metadata_path,
         }
