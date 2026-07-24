@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from src.agents.orchestrator_agent import run_orchestrator
+from src.inference import predict_csv
 from src.state import ExperimentState, save_state
 
 
@@ -758,6 +759,52 @@ def _save_uploaded_file(uploaded_file: Any) -> str:
     return str(output_path)
 
 
+def _list_saved_model_pipelines() -> list[Path]:
+    """Return critic-approved saved model pipelines, newest first."""
+
+    model_directory = Path("outputs/models")
+
+    if not model_directory.exists():
+        return []
+
+    return sorted(
+        model_directory.glob("*_pipeline.joblib"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+
+
+def _format_saved_model_option(model_path: Path) -> str:
+    """Create a readable label for a saved model selector."""
+
+    modified_at = datetime.fromtimestamp(
+        model_path.stat().st_mtime
+    ).strftime("%d %b %Y, %I:%M %p")
+
+    model_name = (
+        model_path.name
+        .replace("_pipeline.joblib", "")
+        .replace("_", " ")
+    )
+
+    return f"{model_name} | saved {modified_at}"
+
+
+def _save_prediction_input(uploaded_file: Any) -> str:
+    """Save an uploaded prediction CSV before passing it to inference."""
+
+    input_directory = Path("data/raw/prediction_inputs")
+    input_directory.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    output_path = input_directory / (
+        f"{timestamp}_{_safe_filename(uploaded_file.name)}"
+    )
+
+    output_path.write_bytes(uploaded_file.getvalue())
+    return str(output_path)
+
+
 def safe_container_with_border():
     try:
         return st.container(border=True)
@@ -973,7 +1020,7 @@ def show_sidebar_help() -> None:
         st.markdown("## Agentic AutoML")
         st.caption("A controlled modelling workflow for tabular CSV data.")
         st.markdown("**Scope**")
-        st.caption("Classification · Regression · Baseline comparison · Reliability review")
+        st.caption("Classification · Regression · Tuning · Reliability review · Saved-model prediction")
         st.info("The critic can withhold a recommendation when the evidence is weak.")
 
 
@@ -1572,10 +1619,289 @@ def _show_run_message(state: ExperimentState, orchestrator_result: dict[str, Any
         st.info(f"Workflow stopped with status: {state.status}")
 
 
+
+def show_prediction_workbench() -> None:
+    """Render the critic-approved saved-model prediction workspace."""
+
+    st.markdown(
+        """
+        <div class="hero-row">
+            <div>
+                <span class="eyebrow">Saved-model inference</span>
+                <h1>Generate trusted predictions.</h1>
+            </div>
+            <div class="agent-ready">
+                <div class="agent-orbit"></div>
+                <div><strong>Pipeline ready</strong><small>Validated batch inference</small></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    render_section_title(
+        "Predict with a saved model",
+        (
+            "Select a critic-approved pipeline, upload new rows, "
+            "and generate a downloadable prediction CSV."
+        ),
+    )
+
+    st.info(
+        "Only pipelines previously approved and saved by the reliability "
+        "workflow are available in this workspace."
+    )
+
+    saved_models = _list_saved_model_pipelines()
+
+    if not saved_models:
+        st.warning(
+            "No saved model pipelines were found in outputs/models. "
+            "Run a successful training experiment first."
+        )
+        return
+
+    settings_column, preview_column = st.columns(
+        [0.42, 0.58],
+        gap="large",
+    )
+
+    with settings_column:
+        with safe_container_with_border():
+            st.markdown("### Prediction setup")
+
+            selected_model = st.selectbox(
+                "Approved saved model",
+                options=saved_models,
+                format_func=_format_saved_model_option,
+                key="prediction_model_selector",
+            )
+
+            prediction_upload = st.file_uploader(
+                "Upload prediction CSV",
+                type=["csv"],
+                key="prediction_csv_upload",
+                help=(
+                    "The CSV must contain the raw feature columns expected "
+                    "by the saved model. The target column is not required."
+                ),
+            )
+
+            generate_predictions = st.button(
+                "Generate predictions",
+                type="primary",
+                width="stretch",
+                disabled=prediction_upload is None,
+                key="generate_saved_model_predictions",
+            )
+
+            st.caption(
+                "Extra columns are retained in the output but ignored by "
+                "the model. Missing required columns stop prediction."
+            )
+
+    prediction_preview: pd.DataFrame | None = None
+    prediction_preview_error: str | None = None
+
+    if prediction_upload is not None:
+        prediction_preview, prediction_preview_error = load_uploaded_dataset(
+            prediction_upload
+        )
+
+    with preview_column:
+        with safe_container_with_border():
+            st.markdown("### Input preview")
+
+            if prediction_preview_error:
+                st.error(prediction_preview_error)
+
+            elif prediction_preview is not None:
+                render_dataset_strip(
+                    prediction_preview,
+                    target_column=None,
+                )
+
+                st.dataframe(
+                    prediction_preview.head(20),
+                    width="stretch",
+                    hide_index=True,
+                )
+
+                if len(prediction_preview) > 20:
+                    st.caption(
+                        f"Showing 20 of {len(prediction_preview):,} rows."
+                    )
+
+            else:
+                st.markdown(
+                    """
+                    <div class="empty-preview">
+                        Upload a CSV to preview the rows that will be sent
+                        to the saved model.
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+    if generate_predictions:
+        if prediction_upload is None:
+            st.error(
+                "Upload a prediction CSV before generating predictions."
+            )
+            return
+
+        prediction_status = st.status(
+            "Loading the saved pipeline and validating the input...",
+            expanded=True,
+        )
+
+        try:
+            prediction_input_path = _save_prediction_input(
+                prediction_upload
+            )
+
+            prediction_status.write(
+                "Checking required feature columns."
+            )
+
+            result = predict_csv(
+                model_path=str(selected_model),
+                input_path=prediction_input_path,
+            )
+
+            prediction_status.update(
+                label="Predictions generated",
+                state="complete",
+                expanded=False,
+            )
+
+            st.session_state["last_prediction_result"] = result
+
+        except Exception as error:
+            prediction_status.update(
+                label="Prediction failed",
+                state="error",
+                expanded=True,
+            )
+
+            st.error(str(error))
+            st.session_state.pop(
+                "last_prediction_result",
+                None,
+            )
+
+    prediction_result = st.session_state.get(
+        "last_prediction_result"
+    )
+
+    if not prediction_result:
+        return
+
+    result_model_path = prediction_result.get("model_path")
+
+    if result_model_path != str(selected_model):
+        st.warning(
+            "The displayed result was generated with a different saved model. "
+            "Click Generate predictions to refresh it."
+        )
+
+    output_path = Path(prediction_result["output_path"])
+
+    if not output_path.exists():
+        st.error(
+            "The generated prediction file could not be found."
+        )
+        return
+
+    result_df = pd.read_csv(output_path)
+
+    render_section_title(
+        "Prediction result",
+        "Review the generated predictions before downloading the CSV.",
+    )
+
+    summary_columns = st.columns(4)
+
+    summary_columns[0].metric(
+        "Rows predicted",
+        prediction_result.get("rows_predicted", 0),
+    )
+    summary_columns[1].metric(
+        "Model",
+        prediction_result.get("display_name", "N/A"),
+    )
+    summary_columns[2].metric(
+        "Task",
+        str(
+            prediction_result.get("task_type", "N/A")
+        ).replace("_", " ").title(),
+    )
+    summary_columns[3].metric(
+        "Tuned model",
+        "Yes" if prediction_result.get("tuning_applied") else "No",
+    )
+
+    ignored_columns = prediction_result.get(
+        "ignored_input_columns",
+        [],
+    )
+
+    if ignored_columns:
+        st.warning(
+            "The following extra input columns were ignored by the model: "
+            + ", ".join(ignored_columns)
+        )
+
+    probability_columns = prediction_result.get(
+        "probability_columns",
+        [],
+    )
+
+    if probability_columns:
+        st.success(
+            "Class probabilities and prediction confidence were included."
+        )
+
+    st.dataframe(
+        result_df,
+        width="stretch",
+        hide_index=True,
+    )
+
+    st.download_button(
+        "Download prediction CSV",
+        data=output_path.read_bytes(),
+        file_name=output_path.name,
+        mime="text/csv",
+        type="primary",
+        key="download_saved_model_predictions",
+    )
+
+    with st.expander(
+        "Prediction execution details",
+        expanded=False,
+    ):
+        st.json(prediction_result)
+
 def main() -> None:
     inject_css()
     show_sidebar_help()
     render_header()
+
+    workspace = st.radio(
+        "Workspace",
+        options=[
+            "Train a model",
+            "Predict with a saved model",
+        ],
+        horizontal=True,
+        key="workspace_mode",
+        label_visibility="collapsed",
+    )
+
+    if workspace == "Predict with a saved model":
+        show_prediction_workbench()
+        return
 
     if "last_state" in st.session_state:
         _, new_experiment_col = st.columns([0.82, 0.18])
