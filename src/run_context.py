@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
+from src.state import ExperimentState
 
 
 @dataclass(frozen=True)
@@ -119,3 +120,32 @@ def create_run_paths(
         ),
         model_directory=model_directory,
     )
+
+def apply_run_paths_to_state(
+    state: ExperimentState,
+    run_paths: RunPaths,
+) -> ExperimentState:
+    """
+    Attach one isolated run's output paths to ExperimentState.
+
+    Path objects are converted to strings so the complete state remains
+    JSON serializable.
+    """
+
+    path_metadata = run_paths.to_dict()
+
+    state.run_id = path_metadata["run_id"]
+    state.run_directory = path_metadata[
+        "run_directory"
+    ]
+    state.state_path = path_metadata[
+        "state_path"
+    ]
+    state.report_path = path_metadata[
+        "report_path"
+    ]
+    state.model_directory = path_metadata[
+        "model_directory"
+    ]
+
+    return state

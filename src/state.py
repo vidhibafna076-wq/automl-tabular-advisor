@@ -17,7 +17,13 @@ class ExperimentState:
     target_column: str
     user_objective: str | None = None
 
-    # Dataset understanding
+    # Isolated run output context
+    run_id: str | None = None
+    run_directory: str | None = None
+    state_path: str | None = None
+    report_path: str | None = None
+    model_directory: str | None = None
+
     # Dataset understanding
     task_type: str | None = None
     base_task: str | None = None

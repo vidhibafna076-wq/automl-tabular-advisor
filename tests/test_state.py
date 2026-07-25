@@ -348,6 +348,14 @@ def test_load_state_accepts_minimal_json_and_applies_defaults(
     assert loaded_state.target_column == "Target"
     assert loaded_state.user_objective is None
 
+    # Older state files do not contain isolated run metadata.
+    # The new fields must receive safe defaults.
+    assert loaded_state.run_id is None
+    assert loaded_state.run_directory is None
+    assert loaded_state.state_path is None
+    assert loaded_state.report_path is None
+    assert loaded_state.model_directory is None
+
     assert loaded_state.task_type is None
     assert loaded_state.base_task is None
     assert loaded_state.task_reason is None
@@ -834,3 +842,93 @@ def test_load_state_rejects_unknown_schema_field(
         load_state(
             str(input_path)
         )
+
+def test_run_metadata_survives_state_json_round_trip(
+    tmp_path: Path,
+) -> None:
+    """
+    Isolated run metadata must remain unchanged when ExperimentState is
+    saved to JSON and loaded again.
+    """
+
+    state = ExperimentState(
+        dataset_path="data/customer_churn.csv",
+        target_column="Churn",
+        user_objective=(
+            "Predict whether a customer will churn"
+        ),
+    )
+
+    state.run_id = (
+        "20260726T120000_123456Z_test1234"
+    )
+
+    state.run_directory = (
+        "outputs/runs/"
+        "20260726T120000_123456Z_test1234"
+    )
+
+    state.state_path = (
+        "outputs/runs/"
+        "20260726T120000_123456Z_test1234/"
+        "experiment_state.json"
+    )
+
+    state.report_path = (
+        "outputs/runs/"
+        "20260726T120000_123456Z_test1234/"
+        "final_report.md"
+    )
+
+    state.model_directory = (
+        "outputs/runs/"
+        "20260726T120000_123456Z_test1234/"
+        "models"
+    )
+
+    output_path = (
+        tmp_path
+        / "experiment_state.json"
+    )
+
+    save_state(
+        state=state,
+        output_path=str(output_path),
+    )
+
+    loaded_state = load_state(
+        str(output_path)
+    )
+
+    assert loaded_state.run_id == state.run_id
+
+    assert (
+        loaded_state.run_directory
+        == state.run_directory
+    )
+
+    assert (
+        loaded_state.state_path
+        == state.state_path
+    )
+
+    assert (
+        loaded_state.report_path
+        == state.report_path
+    )
+
+    assert (
+        loaded_state.model_directory
+        == state.model_directory
+    )
+
+    assert all(
+        isinstance(value, str)
+        for value in [
+            loaded_state.run_id,
+            loaded_state.run_directory,
+            loaded_state.state_path,
+            loaded_state.report_path,
+            loaded_state.model_directory,
+        ]
+    )

@@ -5,7 +5,12 @@ import pytest
 
 from src.run_context import (
     RunPaths,
+    apply_run_paths_to_state,
     create_run_paths,
+)
+from src.state import (
+    ExperimentState,
+    state_to_dict,
 )
 
 
@@ -257,3 +262,84 @@ def test_run_suffix_requires_letter_or_number(
             output_root=tmp_path,
             unique_suffix="---___...",
         )
+
+def test_apply_run_paths_to_state_sets_json_safe_metadata(
+    tmp_path: Path,
+) -> None:
+    """
+    Applying RunPaths must attach every isolated output location to the
+    experiment as JSON-safe strings.
+    """
+
+    created_at = datetime(
+        2026,
+        7,
+        26,
+        12,
+        30,
+        0,
+        654321,
+        tzinfo=timezone.utc,
+    )
+
+    run_paths = create_run_paths(
+        output_root=tmp_path / "runs",
+        created_at=created_at,
+        unique_suffix="state-test",
+    )
+
+    state = ExperimentState(
+        dataset_path="data/test.csv",
+        target_column="Target",
+        user_objective="Test run metadata",
+    )
+
+    returned_state = apply_run_paths_to_state(
+        state=state,
+        run_paths=run_paths,
+    )
+
+    # The helper updates and returns the same experiment object.
+    assert returned_state is state
+
+    assert state.run_id == run_paths.run_id
+
+    assert (
+        state.run_directory
+        == str(run_paths.run_directory)
+    )
+
+    assert (
+        state.state_path
+        == str(run_paths.state_path)
+    )
+
+    assert (
+        state.report_path
+        == str(run_paths.report_path)
+    )
+
+    assert (
+        state.model_directory
+        == str(run_paths.model_directory)
+    )
+
+    state_dictionary = state_to_dict(state)
+
+    assert state_dictionary["run_id"] == (
+        run_paths.run_id
+    )
+
+    assert all(
+        isinstance(
+            state_dictionary[field_name],
+            str,
+        )
+        for field_name in [
+            "run_id",
+            "run_directory",
+            "state_path",
+            "report_path",
+            "model_directory",
+        ]
+    )
