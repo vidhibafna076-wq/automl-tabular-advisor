@@ -714,3 +714,267 @@ def test_maximum_step_limit_prevents_infinite_workflow(
         event.get("phase") != "finished"
         for event in progress_events
     )
+
+def test_persistence_action_uses_run_specific_model_directory(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    The persistence stage must receive the model directory belonging to
+    the current isolated experiment run.
+    """
+
+    state = ExperimentState(
+        dataset_path="data/test.csv",
+        target_column="Target",
+        user_objective=(
+            "Test run-specific model persistence"
+        ),
+    )
+
+    state.status = "reliability_critique_completed"
+
+    model_directory = (
+        tmp_path
+        / "runs"
+        / "run_001"
+        / "models"
+    )
+
+    state.model_directory = str(
+        model_directory
+    )
+
+    captured_arguments = {}
+
+    def fake_model_persistence_tool(
+        state,
+        output_dir,
+        random_state=42,
+    ):
+        captured_arguments["state"] = state
+        captured_arguments["output_dir"] = (
+            output_dir
+        )
+        captured_arguments["random_state"] = (
+            random_state
+        )
+
+        state.status = "model_persistence_checked"
+
+        return {
+            "success": True,
+            "state": state,
+            "model_artifact_summary": {
+                "status": "skipped",
+            },
+            "feature_importance_summary": {
+                "status": "skipped",
+            },
+            "error": None,
+        }
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "model_persistence_tool",
+        fake_model_persistence_tool,
+    )
+
+    result = orchestrator_module._run_action(
+        state=state,
+        action="check_model_persistence",
+        approve_drop_id_columns=False,
+    )
+
+    assert result["success"] is True
+
+    assert (
+        captured_arguments["state"]
+        is state
+    )
+
+    assert (
+        captured_arguments["output_dir"]
+        == str(model_directory)
+    )
+
+    assert (
+        captured_arguments["random_state"]
+        == 42
+    )
+
+def test_report_action_uses_run_specific_report_path(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    The report stage must receive the report path belonging to the current
+    isolated experiment run.
+    """
+
+    state = ExperimentState(
+        dataset_path="data/test.csv",
+        target_column="Target",
+        user_objective=(
+            "Test run-specific report generation"
+        ),
+    )
+
+    state.status = "model_persistence_checked"
+
+    report_path = (
+        tmp_path
+        / "runs"
+        / "run_001"
+        / "final_report.md"
+    )
+
+    state.report_path = str(
+        report_path
+    )
+
+    captured_arguments = {}
+
+    def fake_final_report_tool(
+        state,
+        output_path,
+    ):
+        captured_arguments["state"] = state
+        captured_arguments["output_path"] = (
+            output_path
+        )
+
+        state.status = "final_report_created"
+        state.final_report_path = output_path
+
+        return {
+            "success": True,
+            "state": state,
+            "final_report_path": output_path,
+            "final_report_summary": {},
+            "report_markdown": "",
+            "error": None,
+        }
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "final_report_tool",
+        fake_final_report_tool,
+    )
+
+    result = orchestrator_module._run_action(
+        state=state,
+        action="create_final_report",
+        approve_drop_id_columns=False,
+    )
+
+    assert result["success"] is True
+
+    assert (
+        captured_arguments["state"]
+        is state
+    )
+
+    assert (
+        captured_arguments["output_path"]
+        == str(report_path)
+    )
+
+    assert (
+        result["state"].final_report_path
+        == str(report_path)
+    )
+
+def test_output_actions_use_legacy_defaults_without_run_metadata(
+    monkeypatch,
+) -> None:
+    """
+    Older ExperimentState objects without isolated run paths must continue
+    using the previous default output locations.
+    """
+
+    persistence_state = ExperimentState(
+        dataset_path="legacy.csv",
+        target_column="Target",
+    )
+
+    persistence_state.status = (
+        "reliability_critique_completed"
+    )
+
+    report_state = ExperimentState(
+        dataset_path="legacy.csv",
+        target_column="Target",
+    )
+
+    report_state.status = (
+        "model_persistence_checked"
+    )
+
+    captured = {}
+
+    def fake_model_persistence_tool(
+        state,
+        output_dir,
+        random_state=42,
+    ):
+        captured["model_output_dir"] = output_dir
+
+        return {
+            "success": True,
+            "state": state,
+            "model_artifact_summary": {},
+            "feature_importance_summary": {},
+            "error": None,
+        }
+
+    def fake_final_report_tool(
+        state,
+        output_path,
+    ):
+        captured["report_output_path"] = (
+            output_path
+        )
+
+        return {
+            "success": True,
+            "state": state,
+            "final_report_path": output_path,
+            "final_report_summary": {},
+            "report_markdown": "",
+            "error": None,
+        }
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "model_persistence_tool",
+        fake_model_persistence_tool,
+    )
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "final_report_tool",
+        fake_final_report_tool,
+    )
+
+    orchestrator_module._run_action(
+        state=persistence_state,
+        action="check_model_persistence",
+        approve_drop_id_columns=False,
+    )
+
+    orchestrator_module._run_action(
+        state=report_state,
+        action="create_final_report",
+        approve_drop_id_columns=False,
+    )
+
+    assert (
+        captured["model_output_dir"]
+        == "outputs/models"
+    )
+
+    assert (
+        captured["report_output_path"]
+        == "outputs/reports/final_report.md"
+    )

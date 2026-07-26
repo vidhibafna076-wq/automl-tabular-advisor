@@ -148,14 +148,27 @@ def _run_action(
     if action == "run_reliability_critic":
         return critic_agent(state)
 
-    if action == "run_reliability_critic":
-        return critic_agent(state)
-    
     if action == "check_model_persistence":
-        return model_persistence_tool(state)
+        output_directory = (
+            state.model_directory
+            or "outputs/models"
+        )
+
+        return model_persistence_tool(
+            state=state,
+            output_dir=output_directory,
+        )
 
     if action == "create_final_report":
-        return final_report_tool(state)
+        report_output_path = (
+            state.report_path
+            or "outputs/reports/final_report.md"
+        )
+
+        return final_report_tool(
+            state=state,
+            output_path=report_output_path,
+        )
 
     raise ValueError(f"Unknown orchestrator action: {action}")
 
