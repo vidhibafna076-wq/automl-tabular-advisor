@@ -90,9 +90,24 @@ def main() -> int:
 
     state = orchestrator_result["state"]
 
+    if not state.state_path:
+        raise RuntimeError(
+            "The experiment state path was not configured."
+        )
+
     save_state(
-        state,
-        "outputs/reports/experiment_state.json",
+        state=state,
+        output_path=state.state_path,
+    )
+
+    print(
+        "\nRun directory:",
+        state.run_directory,
+    )
+
+    print(
+        "Experiment state:",
+        state.state_path,
     )
 
     print_orchestrator_summary(
@@ -131,4 +146,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())
