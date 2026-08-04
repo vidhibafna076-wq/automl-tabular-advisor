@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 from src.agents.orchestrator_agent import run_orchestrator
 from src.display import (
@@ -7,8 +8,11 @@ from src.display import (
     print_system_warnings,
     print_tool_history,
 )
+from src.run_context import (
+    apply_run_paths_to_state,
+    create_run_paths,
+)
 from src.state import ExperimentState, save_state
-
 
 def main() -> int:
     """
@@ -58,10 +62,19 @@ def main() -> int:
 
     args = parser.parse_args()
 
+    run_paths = create_run_paths(
+    output_root="outputs/runs",
+)
+
     state = ExperimentState(
         dataset_path=args.file,
         target_column=args.target,
         user_objective=args.objective,
+    )
+
+    apply_run_paths_to_state(
+        state=state,
+        run_paths=run_paths,
     )
 
     state.completed_steps.append(
