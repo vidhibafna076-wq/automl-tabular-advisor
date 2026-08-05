@@ -19,6 +19,12 @@ import streamlit as st
 
 from .helpers import PROJECT_ROOT, safe_filename
 
+from src.run_context import (
+    RunPaths,
+    apply_run_paths_to_state,
+    create_run_paths,
+)
+
 
 SESSION_PATTERN = re.compile(r"^[a-f0-9]{24}$")
 _PROCESS_REGISTRY: dict[str, multiprocessing.Process] = {}
@@ -49,9 +55,31 @@ def session_root(session_id: str) -> Path:
     return root
 
 
-def new_run_id() -> str:
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"run_{timestamp}_{secrets.token_hex(3)}"
+def _apply_payload_run_paths(
+    state: Any,
+    payload: dict[str, Any],
+) -> Any:
+    """
+    Attach the current UI run's artifact paths to an experiment state.
+
+    This deliberately overwrites older run metadata when a paused experiment
+    is resumed in a new run directory.
+    """
+
+    run_paths = RunPaths(
+        run_id=str(payload["run_id"]),
+        run_directory=Path(payload["run_dir"]).resolve(),
+        state_path=Path(payload["state_path"]).resolve(),
+        report_path=Path(payload["report_path"]).resolve(),
+        model_directory=Path(
+            payload["model_directory"]
+        ).resolve(),
+    )
+
+    return apply_run_paths_to_state(
+        state=state,
+        run_paths=run_paths,
+    )
 
 
 def _atomic_pickle(path: Path, value: Any) -> None:
@@ -225,23 +253,34 @@ def _worker(payload_path: str) -> None:
                 payload.get("approval_decisions", []),
             )
 
+        _apply_payload_run_paths(
+            state=state,
+            payload=payload,
+        )
+
         orchestrator_result = run_orchestrator(
             state=state,
             approve_drop_id_columns=payload["approve_drop_id_columns"],
             progress_callback=progress_callback,
         )
+
         state = orchestrator_result["state"]
 
-        reports_dir = run_dir / "reports"
-        reports_dir.mkdir(parents=True, exist_ok=True)
-        state_path = reports_dir / "experiment_state.json"
-        save_state(state, str(state_path))
+        if not state.state_path:
+            raise RuntimeError(
+                "The experiment state path was not configured."
+            )
+
+        save_state(
+            state=state,
+            output_path=state.state_path,
+        )
 
         elapsed = round(time.monotonic() - started, 2)
         orchestrator_result["ui_run_id"] = payload["run_id"]
         orchestrator_result["ui_run_dir"] = str(run_dir)
         orchestrator_result["ui_elapsed_seconds"] = elapsed
-        orchestrator_result["ui_state_path"] = str(state_path)
+        orchestrator_result["ui_state_path"] = state.state_path
         orchestrator_result["ui_resumed_from"] = payload.get("resumed_from")
         _atomic_pickle(result_path, orchestrator_result)
 
@@ -293,11 +332,19 @@ def start_background_run(
 ) -> dict[str, Any]:
     """Create an isolated run and start the orchestrator in a child process."""
 
-    run_id = new_run_id()
-    run_dir = root / "runs" / run_id
+    run_paths = create_run_paths(
+        output_root=root / "runs",
+    )
+
+    run_id = run_paths.run_id
+    run_dir = run_paths.run_directory
+
     input_dir = run_dir / "input"
-    input_dir.mkdir(parents=True, exist_ok=False)
-    run_dir.joinpath("errors").mkdir()
+    input_dir.mkdir(exist_ok=False)
+
+    run_dir.joinpath("errors").mkdir(
+        exist_ok=False,
+    )
 
     if initial_state is None:
         if dataset_bytes is None or not dataset_name:
@@ -315,7 +362,18 @@ def start_background_run(
 
     payload = {
         "run_id": run_id,
-        "run_dir": str(run_dir.resolve()),
+        "run_dir": str(
+            run_paths.run_directory.resolve()
+        ),
+        "state_path": str(
+            run_paths.state_path.resolve()
+        ),
+        "report_path": str(
+            run_paths.report_path.resolve()
+        ),
+        "model_directory": str(
+            run_paths.model_directory.resolve()
+        ),
         "project_root": str(PROJECT_ROOT),
         "dataset_path": str(dataset_path.resolve()),
         "target_column": target_column,
