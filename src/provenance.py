@@ -8,6 +8,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 import platform
 import subprocess
+from typing import Any
 
 from src.state import ExperimentState
 
@@ -46,6 +47,18 @@ def package_versions() -> dict[str, str]:
     return installed
 
 
+def runtime_environment() -> dict[str, Any]:
+    """Return the environment fields required to assess model compatibility."""
+
+    return {
+        "schema_version": 1,
+        "python_version": platform.python_version(),
+        "python_implementation": platform.python_implementation(),
+        "platform": platform.platform(),
+        "package_versions": package_versions(),
+    }
+
+
 def git_revision(project_root: str | Path = PROJECT_ROOT) -> str | None:
     """Return the current Git commit when Git metadata is available."""
 
@@ -78,10 +91,7 @@ def attach_provenance(
         "schema_version": 1,
         "created_at_utc": created_at_utc or datetime.now(timezone.utc).isoformat(),
         "dataset_sha256": dataset_sha256(dataset_path),
-        "python_version": platform.python_version(),
-        "python_implementation": platform.python_implementation(),
-        "platform": platform.platform(),
-        "package_versions": package_versions(),
+        **runtime_environment(),
         "git_revision": git_revision(project_root),
         "run_id": state.run_id,
         "resumed_from_run_id": resumed_from_run_id,

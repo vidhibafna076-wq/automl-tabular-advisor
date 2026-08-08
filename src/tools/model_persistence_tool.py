@@ -12,6 +12,7 @@ from src.data_loader import load_dataset
 from src.model_registry import get_model_by_id
 from src.preprocessing import build_preprocessor, prepare_features_and_target
 from src.state import ExperimentState
+from src.provenance import runtime_environment
 
 
 def _add_tool_event(
@@ -427,6 +428,7 @@ def model_persistence_tool(
             "feature_importance_summary": feature_importance_summary,
             "tuning_applied": use_tuned_parameters,
             "tuning_result": tuning_result,
+            "artifact_environment": runtime_environment(),
         }
 
         saved_metadata_path = _save_json(

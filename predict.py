@@ -90,6 +90,18 @@ def main() -> None:
             f"Output path: {result['output_path']}"
         )
 
+        compatibility = result.get(
+            "artifact_compatibility",
+            {},
+        )
+        print(
+            "Artifact compatibility: "
+            f"{compatibility.get('status', 'unknown')}"
+        )
+
+        for compatibility_warning in compatibility.get("warnings", []):
+            print(f"Compatibility warning: {compatibility_warning}")
+
         ignored_columns = result.get(
             "ignored_input_columns",
             [],

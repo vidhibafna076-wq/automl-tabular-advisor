@@ -48,6 +48,7 @@ The Streamlit application provides:
 - final holdout evaluation
 - reliability criticism and cautious model-selection decisions
 - conditional model persistence
+- saved-model runtime compatibility validation
 - feature-importance metadata when supported
 - Markdown reports and JSON experiment state
 - dataset fingerprints, software versions, Git revision and resumed-run lineage

@@ -2,10 +2,100 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 import json
+import warnings
 
 import joblib
 import numpy as np
 import pandas as pd
+
+from src.provenance import runtime_environment
+
+
+def _major_version(value: str) -> str:
+    """Return the numeric major component from a version string."""
+
+    return value.split(".", maxsplit=1)[0]
+
+
+def _validate_artifact_environment(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Validate persisted-library compatibility before deserializing a model."""
+
+    saved = metadata.get("artifact_environment")
+    current = runtime_environment()
+
+    if saved is None:
+        return {
+            "status": "legacy_unverified",
+            "compatible": None,
+            "warnings": [
+                "This legacy artifact does not record its training environment."
+            ],
+        }
+
+    if not isinstance(saved, dict) or not isinstance(
+        saved.get("package_versions"), dict
+    ):
+        raise ValueError(
+            "The model metadata contains malformed artifact environment information."
+        )
+
+    saved_packages = saved["package_versions"]
+    current_packages = current["package_versions"]
+    incompatible: list[str] = []
+    compatibility_warnings: list[str] = []
+
+    saved_sklearn = saved_packages.get("scikit-learn")
+    current_sklearn = current_packages.get("scikit-learn")
+    if saved_sklearn and saved_sklearn != current_sklearn:
+        incompatible.append(
+            "scikit-learn "
+            f"(saved with {saved_sklearn}, running with {current_sklearn})"
+        )
+
+    for package in ("numpy", "joblib"):
+        saved_version = saved_packages.get(package)
+        current_version = current_packages.get(package)
+        if not saved_version or not current_version:
+            compatibility_warnings.append(
+                f"Could not verify the saved {package} version."
+            )
+        elif _major_version(saved_version) != _major_version(current_version):
+            incompatible.append(
+                f"{package} (saved with {saved_version}, running with {current_version})"
+            )
+        elif saved_version != current_version:
+            compatibility_warnings.append(
+                f"{package} differs: saved with {saved_version}, "
+                f"running with {current_version}."
+            )
+
+    saved_python = str(saved.get("python_version", ""))
+    current_python = str(current["python_version"])
+    if not saved_python:
+        compatibility_warnings.append("Could not verify the saved Python version.")
+    elif _major_version(saved_python) != _major_version(current_python):
+        incompatible.append(
+            f"Python (saved with {saved_python}, running with {current_python})"
+        )
+    elif saved_python != current_python:
+        compatibility_warnings.append(
+            f"Python differs: saved with {saved_python}, running with {current_python}."
+        )
+
+    if incompatible:
+        raise ValueError(
+            "The saved model artifact is incompatible with this runtime: "
+            + "; ".join(incompatible)
+            + ". Retrain the model in the current environment."
+        )
+
+    return {
+        "status": "compatible",
+        "compatible": True,
+        "warnings": compatibility_warnings,
+        "saved_environment": saved,
+        "current_environment": current,
+    }
 
 
 def _resolve_metadata_path(
@@ -245,9 +335,18 @@ def predict_csv(
         resolved_metadata_path
     )
 
-    pipeline = joblib.load(
-        resolved_model_path
-    )
+    artifact_compatibility = _validate_artifact_environment(metadata)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="Setting the shape on a NumPy array has been deprecated.*",
+            category=DeprecationWarning,
+            module=r"joblib\.numpy_pickle",
+        )
+        pipeline = joblib.load(
+            resolved_model_path
+        )
 
     input_df = pd.read_csv(
         resolved_input_path
@@ -386,4 +485,5 @@ def predict_csv(
         "probability_columns": (
             probability_columns
         ),
+        "artifact_compatibility": artifact_compatibility,
     }

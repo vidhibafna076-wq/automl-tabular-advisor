@@ -253,6 +253,11 @@ def test_approved_candidate_is_saved_with_tuned_parameters(
         "C": 0.5,
         "class_weight": None,
     }
+    assert metadata["artifact_environment"]["schema_version"] == 1
+    assert metadata["artifact_environment"]["python_version"]
+    assert metadata["artifact_environment"]["package_versions"][
+        "scikit-learn"
+    ]
 
     assert (
         feature_importance["status"]
