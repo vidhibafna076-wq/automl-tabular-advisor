@@ -12,7 +12,9 @@ from src.run_context import (
     apply_run_paths_to_state,
     create_run_paths,
 )
+from src.provenance import attach_provenance
 from src.state import ExperimentState, save_state
+
 
 def main() -> int:
     """
@@ -63,8 +65,8 @@ def main() -> int:
     args = parser.parse_args()
 
     run_paths = create_run_paths(
-    output_root="outputs/runs",
-)
+        output_root="outputs/runs",
+    )
 
     state = ExperimentState(
         dataset_path=args.file,
@@ -75,6 +77,11 @@ def main() -> int:
     apply_run_paths_to_state(
         state=state,
         run_paths=run_paths,
+    )
+
+    attach_provenance(
+        state,
+        dataset_path=args.file,
     )
 
     state.completed_steps.append(
@@ -128,8 +135,8 @@ def main() -> int:
     )
 
     print(
-        "\nState updated and saved to "
-        "outputs/reports/experiment_state.json"
+        "\nState updated and saved to:",
+        state.state_path,
     )
     print(
         "Current status:",

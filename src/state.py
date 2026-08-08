@@ -24,6 +24,9 @@ class ExperimentState:
     report_path: str | None = None
     model_directory: str | None = None
 
+    # Reproducibility and run lineage
+    provenance: dict[str, Any] = field(default_factory=dict)
+
     # Dataset understanding
     task_type: str | None = None
     base_task: str | None = None

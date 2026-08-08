@@ -212,6 +212,7 @@ def _worker(payload_path: str) -> None:
             sys.path.insert(0, project_root)
 
         from src.agents.orchestrator_agent import run_orchestrator
+        from src.provenance import attach_provenance
         from src.state import ExperimentState, save_state
 
         os.chdir(run_dir)
@@ -256,6 +257,14 @@ def _worker(payload_path: str) -> None:
         _apply_payload_run_paths(
             state=state,
             payload=payload,
+        )
+
+        attach_provenance(
+            state,
+            dataset_path=payload["dataset_path"],
+            created_at_utc=payload.get("created_at"),
+            resumed_from_run_id=payload.get("resumed_from"),
+            project_root=project_root,
         )
 
         orchestrator_result = run_orchestrator(

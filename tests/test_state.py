@@ -355,6 +355,7 @@ def test_load_state_accepts_minimal_json_and_applies_defaults(
     assert loaded_state.state_path is None
     assert loaded_state.report_path is None
     assert loaded_state.model_directory is None
+    assert loaded_state.provenance == {}
 
     assert loaded_state.task_type is None
     assert loaded_state.base_task is None
@@ -504,7 +505,7 @@ def test_state_to_dict_returns_detached_nested_data() -> None:
         == 0.5
     )
 
-def test_separate_state_files_do_not_overwrite_each_other(
+def test_separate_state_files_remain_independent_after_second_save(
     tmp_path: Path,
 ) -> None:
     """

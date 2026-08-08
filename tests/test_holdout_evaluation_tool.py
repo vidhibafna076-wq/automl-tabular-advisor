@@ -2,9 +2,8 @@ from types import SimpleNamespace
 
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.preprocessing import StandardScaler
 
 import src.tools.holdout_evaluation_tool as holdout_module
 from src.state import ExperimentState

@@ -2,31 +2,35 @@
 
 A transparent, controlled AutoML advisor for structured CSV datasets.
 
-The project inspects tabular data, detects the prediction task, creates a preprocessing and validation plan, trains defensible baseline models, compares them with a dummy baseline, critiques the reliability of the evidence, and produces a final experiment report.
+The application inspects tabular data, detects the prediction task, plans preprocessing and validation, trains defensible baseline models, compares them with a dummy baseline, performs guarded tuning and holdout evaluation, and reviews the strength of the evidence before recommending or saving a model.
 
-The system prioritises caution over false confidence. It can refuse to recommend or save a model when the available evidence is weak.
+The system prioritises caution over false confidence. A model is not recommended or persisted merely because it ranks first; the reliability review must find the available evidence strong enough.
+
+## Current workflow
+
+```text
+Inspect -> Plan -> Prepare -> Pipeline -> Registry -> Train
+        -> Compare -> Tune -> Holdout -> Critique -> Persist -> Report
+```
+
+This is a 12-stage controlled evaluation workflow. The orchestrator chooses the next permitted action from the experiment state and invokes a fixed set of tools. It does not allow an autonomous agent to execute arbitrary operations.
 
 ## User experience
 
-The Streamlit application uses a compact agentic command-centre interface:
+The Streamlit application provides:
 
-- central CSV upload or built-in sample dataset
-- objective and target-column selection
-- compact dataset summary with an optional preview
-- real progress updates from the ten orchestrator steps
-- separate results screen so the upload page does not become excessively long
-- decision-first results with supporting Data, Models, Reliability and Report tabs
-- downloadable Markdown report
-- responsive dark interface for desktop and smaller screens
-
-## Controlled agent workflow
-
-```text
-Inspect -> Plan -> Prepare -> Pipeline -> Registry
-        -> Train -> Compare -> Critique -> Persist -> Report
-```
-
-The orchestrator selects the next permitted action from the experiment state. It does not allow an uncontrolled agent to execute arbitrary tools.
+- CSV upload and a built-in sample dataset
+- objective, target-column and task-type controls
+- dataset preview and target-distribution summary
+- background experiment execution with progress updates
+- per-session and per-run artifact isolation
+- configurable runtime limits and whole-run termination
+- explicit approval or rejection of proposed preprocessing decisions
+- resumable experiments after approval
+- evidence-first results covering data, models, tuning, holdout evaluation, reliability and reporting
+- reviewed-model discovery and batch CSV prediction
+- downloadable reports and prediction results
+- a responsive interface for desktop and smaller screens
 
 ## Current capabilities
 
@@ -34,15 +38,20 @@ The orchestrator selects the next permitted action from the experiment state. It
 - binary classification
 - multiclass classification
 - regression
-- automatic task detection
+- automatic task detection with a user override
 - data profiling and quality checks
 - leakage warnings
-- preprocessing configuration and pipeline creation
+- preprocessing planning and pipeline construction
 - cross-validated baseline training
 - dummy-baseline comparison
-- reliability criticism
+- guarded Optuna hyperparameter tuning
+- final holdout evaluation
+- reliability criticism and cautious model-selection decisions
 - conditional model persistence
-- final Markdown report and JSON experiment state
+- feature-importance metadata when supported
+- Markdown reports and JSON experiment state
+- dataset fingerprints, software versions, Git revision and resumed-run lineage
+- batch inference from reviewed saved pipelines
 - Streamlit and command-line interfaces
 
 ## Installation
@@ -64,7 +73,9 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The application opens in your default browser. Upload a CSV, select the column you want to predict, describe the objective, and start the experiment.
+Upload a CSV or select the sample dataset, choose the target column, describe the objective, review the inferred task, and start the experiment.
+
+Streamlit experiments run in spawned child processes. The browser remains responsive while a run is active and can terminate the complete experiment process. Termination does not currently skip an individual model while allowing the remainder of the run to continue.
 
 ## Run from the command line
 
@@ -76,45 +87,87 @@ python main.py `
   --approve-drop-id-columns
 ```
 
+The CLI creates an isolated directory under `outputs/runs/` and prints the paths to the run directory and saved experiment state.
+
+## Generate predictions
+
+```powershell
+python predict.py `
+  --model outputs/runs/<run-id>/models/<model>_pipeline.joblib `
+  --input data/sample/inference_demo.csv
+```
+
+Only load model artifacts from trusted sources. Joblib model files can execute code during deserialization.
+
 ## Generated outputs
 
-Completed runs can create:
+CLI experiments create isolated output directories using this layout:
 
-- `outputs/reports/experiment_state.json`
-- `outputs/reports/final_report.md`
-- an approved model artifact under `outputs/models/`
-- model metadata and feature-importance information when persistence is approved
+```text
+outputs/runs/<run-id>/
+|-- experiment_state.json
+|-- final_report.md
+`-- models/
+    |-- <model>_pipeline.joblib
+    `-- <model>_metadata.json
+```
 
-A model is not saved automatically merely because it ranks first. The reliability critic must approve the evidence first.
+Streamlit experiments use session-scoped storage:
+
+```text
+outputs/sessions/<session-id>/runs/<run-id>/
+```
+
+A run might not contain a saved model. Model persistence occurs only when the reliability critic approves the available evidence.
 
 ## Project structure
 
 ```text
-app.py                         Streamlit interface
-main.py                        Command-line interface
-data/sample/                   Small demonstration dataset
+app.py                         Streamlit entry point
+main.py                        Command-line experiment runner
+predict.py                     Command-line batch inference
+data/sample/                   Small demonstration datasets
 src/agents/                    Planner, critic and orchestrator
 src/tools/                     Controlled workflow tools
+src/ui/                        Streamlit interface and run-time management
 src/data_loader.py             CSV loading and validation
 src/data_profiler.py           Dataset profiling
-src/data_quality.py            Quality analysis
+src/data_quality.py            Data-quality analysis
 src/preprocessing.py           Preprocessing construction
 src/model_registry.py          Candidate model selection
-src/training.py                Cross-validated baseline training
+src/training.py                Cross-validated model training
 src/comparison.py              Leaderboard and dummy comparison
+src/inference.py               Saved-pipeline inference
 src/reporting.py               Report generation
+src/run_context.py             Isolated run paths
 src/state.py                   Shared experiment state
-outputs/                       Generated reports and approved artifacts
+tests/                         Regression and workflow tests
+outputs/                       Generated run artifacts
 ```
+
+## Testing
+
+```powershell
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+Pytest stores its temporary files and cache under `outputs/`, which keeps the
+test suite usable in environments where the system temporary directory is
+restricted.
 
 ## Important limitations
 
 This is a learning-focused and portfolio-focused prototype, not a production AutoML platform.
 
-- Long-running jobs still run inside the Streamlit process.
-- A browser Stop button cannot safely interrupt model fitting yet.
-- There is no authentication, multi-user isolation or cloud job queue.
-- The current workflow focuses on structured tabular data.
-- A recommendation is a baseline modelling decision, not a production-deployment guarantee.
+- There is no authentication or account-level authorization.
+- Session tokens provide run isolation but are not a security boundary.
+- Artifacts and uploaded data are stored on the local filesystem.
+- There is no durable job queue, external worker service or database-backed run registry.
+- Whole runs can be terminated, but individual model fits cannot be cooperatively skipped.
+- The workflow currently focuses on structured CSV data.
+- Validation defaults cannot account for unknown time, group or causal structure unless that context is explicitly modelled.
+- A recommendation is a baseline modelling decision, not evidence that a model is ready for production deployment.
+- Saved model artifacts must only be loaded from trusted sources.
 
-The next production-oriented step would be to move experiment execution into a background worker or API so runs can be cancelled, monitored and resumed independently of the browser sessi
+Before a public multi-user deployment, add authenticated identities, durable private storage, retention controls, resource quotas, monitoring and a server-side job queue.

@@ -1,7 +1,10 @@
-pandas
-numpy
-scikit-learn
-matplotlib
-joblib
-streamlit
-optuna
+# Runtime dependencies tested with Python 3.13.
+# Keep compatible minor-version ranges so fresh installations receive bug
+# fixes without silently crossing major or feature-version boundaries.
+pandas>=3.0,<3.1
+numpy>=2.5,<2.6
+scikit-learn>=1.9,<2.0
+matplotlib>=3.11,<3.12
+joblib>=1.5,<2.0
+streamlit>=1.58,<1.59
+optuna>=4.9,<5.0

@@ -43,6 +43,35 @@ def _format_key_value_dict(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _format_provenance(provenance: dict[str, Any]) -> str:
+    """Format reproducibility metadata without assuming a current schema."""
+
+    if not provenance:
+        return "No reproducibility metadata was recorded for this run."
+
+    lines = [
+        f"- **Run ID:** {_value(provenance.get('run_id'))}",
+        f"- **Run created at (UTC):** {_value(provenance.get('created_at_utc'))}",
+        f"- **Resumed from run:** {_value(provenance.get('resumed_from_run_id'))}",
+        f"- **Dataset SHA-256:** `{_value(provenance.get('dataset_sha256'))}`",
+        f"- **Git revision:** `{_value(provenance.get('git_revision'))}`",
+        f"- **Python:** {_value(provenance.get('python_implementation'))} "
+        f"{_value(provenance.get('python_version'))}",
+        f"- **Platform:** {_value(provenance.get('platform'))}",
+    ]
+
+    package_data = provenance.get("package_versions") or {}
+    lines.extend(["", "## Runtime Package Versions", ""])
+    if package_data:
+        lines.extend(["| Package | Version |", "|---|---|"])
+        for package, package_version in sorted(package_data.items()):
+            lines.append(f"| {package} | {package_version} |")
+    else:
+        lines.append("No runtime package versions were recorded.")
+
+    return "\n".join(lines)
+
+
 def _format_quality_issues(issues: list[dict[str, Any]]) -> str:
     """
     Format data quality issues for the report.
@@ -458,6 +487,9 @@ def create_final_report_summary(state: ExperimentState) -> dict[str, Any]:
         "best_overall_model": comparison_summary.get("best_overall_display_name"),
         "best_useful_model": comparison_summary.get("best_useful_display_name"),
         "models_trained": state.training_summary.get("models_completed"),
+        "run_id": state.provenance.get("run_id"),
+        "dataset_sha256": state.provenance.get("dataset_sha256"),
+        "git_revision": state.provenance.get("git_revision"),
         "final_status": state.status,
     }
 
@@ -706,7 +738,12 @@ def create_final_report_markdown(state: ExperimentState) -> str:
     lines.append(_format_tool_history(state.tool_history))
     lines.append("")
 
-    lines.append("# 13. Final Conclusion")
+    lines.append("# 13. Reproducibility and Provenance")
+    lines.append("")
+    lines.append(_format_provenance(state.provenance))
+    lines.append("")
+
+    lines.append("# 14. Final Conclusion")
     lines.append("")
 
     if decision == "do_not_recommend_model":

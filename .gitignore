@@ -29,11 +29,8 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Generated outputs
-outputs/reports/experiment_state.json
-outputs/reports/final_report.md
-outputs/models/
-outputs/figures/
+# Generated outputs and test artifacts
+outputs/**
 
 # Uploaded or raw user data
 data/raw/
@@ -53,10 +50,3 @@ data/figures
 data/models
 data/reports
 data/visualizations
-outputs/reports
-outputs/models
-outputs/figures
-outputs/figures/plots
-outputs/predictions
-outputs/sessions
-outputs/runs
