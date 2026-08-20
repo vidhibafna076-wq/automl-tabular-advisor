@@ -370,10 +370,17 @@ def show_setup_workbench(root: Path) -> None:
                 )
                 approve_drop_identifiers = st.checkbox(
                     "Pre-approve dropping likely identifier columns",
-                    value=False,
+                    value=(mode == "Use sample dataset"),
+                    key=(
+                        "sample_drop_identifiers"
+                        if mode == "Use sample dataset"
+                        else "upload_drop_identifiers"
+                    ),
                     help=(
                         "Off by default because removing a feature is consequential. "
-                        "When off, the workflow may pause for a human decision."
+                        "The built-in sample enables this because Loan_ID is a known "
+                        "demonstration identifier. When off, the workflow may pause "
+                        "for a human decision."
                     ),
                 )
                 runtime_limit_label = st.selectbox(

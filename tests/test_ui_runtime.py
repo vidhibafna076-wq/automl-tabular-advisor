@@ -4,9 +4,102 @@ from pathlib import Path
 import pickle
 from typing import Any
 
+import pytest
+
 from src.state import ExperimentState, state_to_dict
 from src.ui import runtime as runtime_module
-from src.ui.runtime import _apply_payload_run_paths
+from src.ui.runtime import _apply_approval_decisions, _apply_payload_run_paths
+from src.tools.preprocessing_pipeline_tool import preprocessing_pipeline_tool
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _paused_sample_state() -> ExperimentState:
+    state = ExperimentState(
+        dataset_path=str(PROJECT_ROOT / "data" / "sample" / "loan_sample.csv"),
+        target_column="Loan_Status",
+    )
+    approval = {
+        "approval_id": "drop_id_columns",
+        "title": "Approve dropping possible ID columns",
+        "columns": ["Loan_ID"],
+    }
+    state.profile = {"possible_id_columns": ["Loan_ID"]}
+    state.pending_approvals = [approval]
+    state.preprocessing_config = {
+        "target_column": "Loan_Status",
+        "original_feature_columns": [
+            "Loan_ID",
+            "Gender",
+            "Married",
+            "ApplicantIncome",
+            "LoanAmount",
+            "Credit_History",
+            "Property_Area",
+        ],
+        "final_feature_columns": [
+            "Loan_ID",
+            "Gender",
+            "Married",
+            "ApplicantIncome",
+            "LoanAmount",
+            "Credit_History",
+            "Property_Area",
+        ],
+        "columns_to_drop": [],
+        "drop_reasons": {},
+        "pending_approvals": [approval],
+        "numerical_features": [
+            "ApplicantIncome",
+            "LoanAmount",
+            "Credit_History",
+        ],
+        "categorical_features": [
+            "Loan_ID",
+            "Gender",
+            "Married",
+            "Property_Area",
+        ],
+        "missing_value_strategy": {
+            "numerical": {
+                "strategy": "median",
+                "columns_with_missing_values": ["LoanAmount"],
+            },
+            "categorical": {
+                "strategy": "most_frequent",
+                "columns_with_missing_values": [],
+            },
+        },
+        "scaling_strategy": {"apply_to_numerical": True},
+    }
+    state.status = "preprocessing_config_created_with_pending_approvals"
+    return state
+
+
+@pytest.mark.parametrize("action", ["approve", "reject"])
+def test_approval_decision_resumes_sample_preprocessing_pipeline(action: str) -> None:
+    state = _paused_sample_state()
+
+    _apply_approval_decisions(state, [{"action": action}])
+
+    assert state.status == "preprocessing_config_created"
+    assert state.pending_approvals == []
+    assert state.preprocessing_config["pending_approvals"] == []
+
+    if action == "approve":
+        assert "Loan_ID" in state.preprocessing_config["columns_to_drop"]
+        assert "Loan_ID" not in state.preprocessing_config["final_feature_columns"]
+        assert "Loan_ID" not in state.preprocessing_config["categorical_features"]
+    else:
+        assert "Loan_ID" not in state.preprocessing_config["columns_to_drop"]
+        assert "Loan_ID" in state.preprocessing_config["final_feature_columns"]
+        assert "Loan_ID" in state.preprocessing_config["categorical_features"]
+
+    result = preprocessing_pipeline_tool(state)
+
+    assert result["success"] is True
+    assert state.status == "preprocessing_pipeline_created"
 
 
 def test_payload_run_paths_are_attached_to_ui_state(

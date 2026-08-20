@@ -138,6 +138,7 @@ def _apply_approval_decisions(
     likely_identifiers = list(profile.get("possible_id_columns", []) or [])
 
     audit_rows: list[dict[str, Any]] = []
+    approved_actions = list(getattr(state, "approved_actions", []) or [])
     for index, approval in enumerate(pending):
         decision = decisions[index] if index < len(decisions) else {}
         action = decision.get("action")
@@ -149,10 +150,16 @@ def _apply_approval_decisions(
             for column in columns:
                 if column not in columns_to_drop:
                     columns_to_drop.append(column)
+                config.setdefault("drop_reasons", {})[
+                    column
+                ] = "possible_identifier_user_approved"
+            if "approved_drop_id_columns" not in approved_actions:
+                approved_actions.append("approved_drop_id_columns")
         elif action == "reject":
-            columns_to_drop = [
-                column for column in columns_to_drop if column not in set(columns)
-            ]
+            # Pending identifier columns were not in columns_to_drop yet. Keep
+            # any independent automatic drop decision, such as a constant
+            # column, intact when the identifier proposal is rejected.
+            pass
         else:
             raise ValueError("Every pending preprocessing decision needs a response.")
 
@@ -165,10 +172,38 @@ def _apply_approval_decisions(
             }
         )
 
+    columns_to_drop = list(dict.fromkeys(columns_to_drop))
     config["columns_to_drop"] = columns_to_drop
+    config["final_feature_columns"] = [
+        column
+        for column in config.get("original_feature_columns", [])
+        if column not in columns_to_drop
+    ]
+    config["numerical_features"] = [
+        column
+        for column in config.get("numerical_features", [])
+        if column not in columns_to_drop
+    ]
+    config["categorical_features"] = [
+        column
+        for column in config.get("categorical_features", [])
+        if column not in columns_to_drop
+    ]
+    missing_strategy = config.get("missing_value_strategy", {}) or {}
+    for feature_type in ("numerical", "categorical"):
+        strategy = missing_strategy.get(feature_type, {}) or {}
+        strategy["columns_with_missing_values"] = [
+            column
+            for column in strategy.get("columns_with_missing_values", [])
+            if column not in columns_to_drop
+        ]
+        missing_strategy[feature_type] = strategy
+    config["missing_value_strategy"] = missing_strategy
     config["pending_approvals"] = []
     config["human_approval_decisions"] = audit_rows
     state.preprocessing_config = config
+    state.pending_approvals = []
+    state.approved_actions = approved_actions
     state.status = "preprocessing_config_created"
 
     completed = list(getattr(state, "completed_steps", []) or [])

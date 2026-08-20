@@ -179,12 +179,16 @@ def render_approval_panel(
         submitted = st.form_submit_button(
             "Apply decisions and resume",
             type="primary",
-            disabled=not confirmed,
         )
 
     if submitted:
         if any(choice == "Choose an outcome" for choice in choices):
             st.error("Choose an outcome for every preprocessing decision.")
+            return
+        if not confirmed:
+            st.error(
+                "Confirm that you reviewed every preprocessing decision before resuming."
+            )
             return
         decisions = [
             {
