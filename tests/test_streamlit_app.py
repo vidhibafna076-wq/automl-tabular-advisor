@@ -1,6 +1,12 @@
 """Browser-free smoke tests for the Streamlit application entry point."""
 
+from types import SimpleNamespace
+
+import pytest
 from streamlit.testing.v1 import AppTest
+
+from src.ui.components import workflow_completion_flags
+from src.ui.constants import WORKFLOW_STEPS
 
 
 def _app() -> AppTest:
@@ -90,3 +96,35 @@ render_approval_panel(state, {"ui_run_id": "test-run"}, resume)
     assert not app.exception
     assert not app.error
     assert app.session_state["captured_decisions"] == [{"action": "approve"}]
+
+
+@pytest.mark.parametrize(
+    ("tuning_status", "holdout_status"),
+    [
+        ("completed", "completed"),
+        ("skipped", "skipped"),
+    ],
+)
+def test_workflow_counts_terminal_tuning_and_holdout_artifacts(
+    tuning_status: str,
+    holdout_status: str,
+) -> None:
+    """Completed or policy-skipped stage artifacts must finish the tracker."""
+
+    completed_steps = {
+        marker
+        for step in WORKFLOW_STEPS
+        if step.label not in {"Tune", "Holdout"}
+        for marker in step.markers
+    }
+    state = SimpleNamespace(
+        completed_steps=list(completed_steps),
+        tuning_result={"status": tuning_status},
+        tuning_summary={"status": tuning_status},
+        holdout_result={"status": holdout_status},
+    )
+
+    assert workflow_completion_flags(state) == [
+        True
+        for _ in WORKFLOW_STEPS
+    ]

@@ -370,6 +370,46 @@ def _add_holdout_findings(
         )
 
 
+def _tuning_follow_up_action(state: ExperimentState) -> str:
+    """Describe the guarded-tuning evidence that already exists.
+
+    The reliability critic runs after guarded tuning and final holdout
+    evaluation. Its actions must therefore review the recorded tuning outcome
+    instead of suggesting that tuning still needs to be started.
+    """
+
+    tuning_result = getattr(state, "tuning_result", {}) or {}
+    tuning_summary = getattr(state, "tuning_summary", {}) or {}
+    status = str(
+        tuning_result.get("status")
+        or tuning_summary.get("status")
+        or "not_recorded"
+    ).strip().lower()
+
+    if status == "completed":
+        if tuning_result.get("accepted_for_final_evaluation") is True:
+            return (
+                "Review the accepted guarded-tuning evidence and do not reuse "
+                "the final holdout for further model selection."
+            )
+
+        return (
+            "Retain the baseline candidate unless later evidence justifies "
+            "revisiting the guarded-tuning result."
+        )
+
+    if status == "skipped":
+        return (
+            "Guarded tuning was assessed and skipped under the current policy; "
+            "revisit it only if the modelling evidence changes."
+        )
+
+    return (
+        "Review the guarded-tuning record before using the candidate because "
+        "no terminal tuning result was recorded."
+    )
+
+
 def create_critic_report(
     state: ExperimentState,
 ) -> dict[str, Any]:
@@ -641,7 +681,7 @@ def create_critic_report(
         next_actions = [
             "Treat the selected useful model as a tentative candidate.",
             "Review the candidate-specific medium-severity findings.",
-            "Perform limited tuning only after the reliability concerns are understood.",
+            _tuning_follow_up_action(state),
             "Do not treat the current result as deployment approval.",
         ]
 
@@ -650,7 +690,7 @@ def create_critic_report(
             "Proceed with the selected candidate as the current recommended model.",
             "Save the critic-approved fitted pipeline and its metadata.",
             "Review feature importance and domain suitability.",
-            "Consider limited tuning without using the final holdout repeatedly.",
+            _tuning_follow_up_action(state),
         ]
 
     return {

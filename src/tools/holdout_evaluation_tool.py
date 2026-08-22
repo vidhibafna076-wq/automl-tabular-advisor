@@ -585,15 +585,17 @@ def holdout_evaluation_tool(
             )
         )
 
+        display_name = (
+            candidate_summary.get("display_name")
+            or comparison_summary.get("best_useful_display_name")
+            or model_id
+        )
+
         result = {
             "status": "completed",
             "holdout_used": True,
             "model_id": model_id,
-            "display_name": (
-                candidate_summary.get("display_name")
-                or comparison_summary.get("best_useful_display_name")
-                or model_id
-            ),
+            "display_name": display_name,
             "primary_metric": primary_metric,
             "cv_primary_score": cv_primary_score,
             "holdout_primary_score": holdout_primary_score,

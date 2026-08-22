@@ -668,7 +668,7 @@ def show_reliability_tab(
             ),
         )
         columns[2].metric(
-            "Tuning allowed",
+            "Tuning reliability gate",
             humanise(critic.get("can_proceed_to_tuning")),
         )
 

@@ -98,6 +98,11 @@ def test_reliable_candidate_is_recommended() -> None:
         ),
     }
 
+    state.tuning_result = {
+        "status": "completed",
+        "accepted_for_final_evaluation": True,
+    }
+
     state.leakage_warnings = []
 
     result = critic_agent(state)
@@ -182,6 +187,17 @@ def test_reliable_candidate_is_recommended() -> None:
     assert (
         "Save the critic-approved fitted pipeline and its metadata."
         in critic_report["next_actions"]
+    )
+
+    assert (
+        "Review the accepted guarded-tuning evidence and do not reuse "
+        "the final holdout for further model selection."
+        in critic_report["next_actions"]
+    )
+
+    assert not any(
+        "consider limited tuning" in action.lower()
+        for action in critic_report["next_actions"]
     )
 
     # State stores the same report.

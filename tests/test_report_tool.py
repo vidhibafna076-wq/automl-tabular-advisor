@@ -954,6 +954,11 @@ def test_approved_model_report_includes_artifacts_tuning_and_importance(
     )
 
     assert (
+        "- **Candidate met tuning reliability gate:** True"
+        in report_markdown
+    )
+
+    assert (
         "- **Model:** Logistic Regression"
         in report_markdown
     )
@@ -998,6 +1003,20 @@ def test_approved_model_report_includes_artifacts_tuning_and_importance(
         "| f1 | 0.81 |"
         in report_markdown
     )
+
+    # The conclusion must describe completed evidence, not suggest tuning
+    # as a future stage after it has already run.
+    assert (
+        "Guarded tuning status: **completed**."
+        in report_markdown
+    )
+
+    assert (
+        "Final holdout status: **completed**."
+        in report_markdown
+    )
+
+    assert "before moving to tuning" not in report_markdown
 
     # Saved artifact evidence
     assert (

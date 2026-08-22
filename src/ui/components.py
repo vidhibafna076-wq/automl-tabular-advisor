@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
@@ -643,13 +644,80 @@ def step_is_complete(completed: set[str], markers: tuple[str, ...]) -> bool:
     return any(marker in completed for marker in markers)
 
 
-def render_workflow(state: Any | None = None) -> None:
+def _artifact_stage_is_complete(
+    state: Any,
+    *attribute_names: str,
+) -> bool:
+    """Return whether a stage artifact records a terminal successful outcome.
+
+    Older runs may not contain the newer tuning and holdout markers in
+    ``completed_steps`` even though their structured result artifacts were
+    written successfully. Treat completed and policy-skipped artifacts as
+    finished stages while retaining marker-based behaviour for older states.
+    """
+
+    terminal_statuses = {
+        "completed",
+        "skipped",
+    }
+
+    for attribute_name in attribute_names:
+        artifact = getattr(state, attribute_name, None)
+
+        if not isinstance(artifact, Mapping):
+            continue
+
+        status = str(artifact.get("status", "")).strip().lower()
+
+        if status in terminal_statuses:
+            return True
+
+    return False
+
+
+def workflow_completion_flags(state: Any | None = None) -> list[bool]:
+    """Build workflow completion flags from markers and result artifacts."""
+
     completed = set(getattr(state, "completed_steps", []) if state else [])
     completion_flags = [
         step_is_complete(completed, step.markers) for step in WORKFLOW_STEPS
     ]
+
+    if state is None:
+        return completion_flags
+
+    artifact_checks = {
+        "tune": _artifact_stage_is_complete(
+            state,
+            "tuning_result",
+            "tuning_summary",
+        ),
+        "holdout": _artifact_stage_is_complete(
+            state,
+            "holdout_result",
+        ),
+    }
+
+    for index, step in enumerate(WORKFLOW_STEPS):
+        label = str(step.label).strip().lower()
+
+        if artifact_checks.get(label, False):
+            completion_flags[index] = True
+
+    return completion_flags
+
+
+def render_workflow(state: Any | None = None) -> None:
+    completion_flags = workflow_completion_flags(state)
     completed_count = sum(completion_flags)
-    current_index = min(completed_count, len(WORKFLOW_STEPS) - 1)
+    current_index = next(
+        (
+            index
+            for index, is_complete in enumerate(completion_flags)
+            if not is_complete
+        ),
+        len(WORKFLOW_STEPS) - 1,
+    )
 
     steps_html: list[str] = []
     for index, (step, is_complete) in enumerate(

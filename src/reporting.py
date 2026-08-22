@@ -271,7 +271,10 @@ def _format_critic_report(critic_report: dict[str, Any]) -> str:
 
     lines.append(f"- **Overall reliability:** {critic_report['overall_reliability']}")
     lines.append(f"- **Recommendation decision:** {critic_report['recommendation_decision']}")
-    lines.append(f"- **Can proceed to tuning:** {critic_report['can_proceed_to_tuning']}")
+    lines.append(
+        "- **Candidate met tuning reliability gate:** "
+        f"{critic_report['can_proceed_to_tuning']}"
+    )
     lines.append("")
 
     lines.append("## Selected Candidate")
@@ -492,6 +495,58 @@ def create_final_report_summary(state: ExperimentState) -> dict[str, Any]:
         "git_revision": state.provenance.get("git_revision"),
         "final_status": state.status,
     }
+
+
+def _result_status(result: dict[str, Any]) -> str:
+    """Return a concise status for a structured workflow result."""
+
+    status = str((result or {}).get("status", "")).strip().lower()
+    return status or "not recorded"
+
+
+def _format_final_conclusion(
+    state: ExperimentState,
+    decision: str,
+) -> str:
+    """Create a conclusion that reflects stages already executed."""
+
+    tuning_status = _result_status(
+        getattr(state, "tuning_result", {}) or {}
+    )
+    holdout_status = _result_status(
+        getattr(state, "holdout_result", {}) or {}
+    )
+    evidence_summary = (
+        "The controlled workflow completed through reliability review, model "
+        "persistence assessment, and reporting. Guarded tuning status: "
+        f"**{tuning_status}**. Final holdout status: **{holdout_status}**."
+    )
+
+    if decision == "do_not_recommend_model":
+        return (
+            f"{evidence_summary} The AutoML advisor should not recommend a final "
+            "model from this run. Review the critic findings and improve the "
+            "modelling evidence before rerunning the workflow."
+        )
+
+    if decision == "recommend_with_caution":
+        return (
+            f"{evidence_summary} The selected candidate remains provisional. "
+            "Review the critic findings, domain suitability, and independent "
+            "validation requirements before use."
+        )
+
+    if decision == "recommend_candidate_model":
+        return (
+            f"{evidence_summary} The critic approved the selected candidate based "
+            "on the current evidence. Review feature importance, artifact "
+            "compatibility, domain suitability, and deployment constraints before use."
+        )
+
+    return (
+        f"{evidence_summary} No recognised final recommendation was recorded. "
+        "Inspect the critic report and execution timeline before using any artifact."
+    )
 
 
 def create_final_report_markdown(state: ExperimentState) -> str:
@@ -745,19 +800,7 @@ def create_final_report_markdown(state: ExperimentState) -> str:
 
     lines.append("# 14. Final Conclusion")
     lines.append("")
-
-    if decision == "do_not_recommend_model":
-        lines.append(
-            "The AutoML advisor should not recommend a final model from this run. "
-            "The pipeline is functioning correctly, but the current dataset is too small "
-            "and the trained models do not clearly outperform the dummy baseline. The next "
-            "best step is to run the workflow on a larger and more representative dataset."
-        )
-    else:
-        lines.append(
-            "The AutoML advisor has completed the baseline modelling workflow. Review the "
-            "critic report and next actions before moving to tuning or deployment."
-        )
+    lines.append(_format_final_conclusion(state, decision))
 
     lines.append("")
 
