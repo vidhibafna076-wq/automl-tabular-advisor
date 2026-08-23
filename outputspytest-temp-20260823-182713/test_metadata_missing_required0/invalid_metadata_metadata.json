@@ -1,0 +1,6 @@
+{
+    "target_column": "Approved",
+    "task_type": "binary_classification",
+    "base_task": "classification",
+    "model_id": "logistic_regression"
+}

@@ -1,0 +1,4 @@
+{
+    "dataset_path": "data/minimal.csv",
+    "target_column": "Target"
+}

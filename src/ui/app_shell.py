@@ -386,13 +386,14 @@ def show_setup_workbench(root: Path) -> None:
                 runtime_limit_label = st.selectbox(
                     "Automatic run limit",
                     (
+                        "1 minute",
                         "5 minutes",
                         "10 minutes",
                         "20 minutes",
                         "30 minutes",
                         "No automatic limit",
                     ),
-                    index=2,
+                    index=3,
                     help=(
                         "The isolated worker is terminated if it exceeds this limit. "
                         "Completed stages remain diagnostic only."

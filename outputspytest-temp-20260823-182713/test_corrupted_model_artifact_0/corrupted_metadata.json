@@ -1,0 +1,14 @@
+{
+    "target_column": "Approved",
+    "task_type": "binary_classification",
+    "base_task": "classification",
+    "model_id": "logistic_regression",
+    "display_name": "Logistic Regression",
+    "preprocessing_config": {
+        "numerical_features": [
+            "Income",
+            "Credit_Score"
+        ],
+        "categorical_features": []
+    }
+}

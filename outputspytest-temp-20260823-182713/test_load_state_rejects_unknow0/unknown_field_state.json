@@ -1,0 +1,5 @@
+{
+    "dataset_path": "incompatible.csv",
+    "target_column": "Target",
+    "unexpected_experiment_field": "This field is not part of ExperimentState."
+}

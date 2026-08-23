@@ -1,0 +1,15 @@
+{
+    "target_column": "Sale_Price",
+    "task_type": "regression",
+    "base_task": "regression",
+    "model_id": "ridge_regression",
+    "display_name": "Ridge Regression",
+    "tuning_applied": false,
+    "preprocessing_config": {
+        "numerical_features": [
+            "Square_Metres",
+            "Bedrooms"
+        ],
+        "categorical_features": []
+    }
+}

@@ -1,0 +1,60 @@
+{
+    "created_at": "2026-08-23T18:27:29",
+    "dataset_path": "approved_test.csv",
+    "target_column": "Target",
+    "task_type": "binary_classification",
+    "base_task": "classification",
+    "model_id": "logistic_regression",
+    "display_name": "Logistic Regression",
+    "primary_metric": "f1",
+    "primary_score": 0.8,
+    "critic_decision": "recommend_candidate_model",
+    "preprocessing_config": {
+        "numerical_features": [
+            "feature_a",
+            "feature_b"
+        ],
+        "categorical_features": []
+    },
+    "feature_importance_summary": {
+        "status": "available",
+        "importance_type": "linear_absolute_coefficient",
+        "top_features": [
+            {
+                "rank": 1,
+                "feature": "numerical__feature_b",
+                "importance": 0.696028318598009
+            },
+            {
+                "rank": 2,
+                "feature": "numerical__feature_a",
+                "importance": 0.696028318598009
+            }
+        ]
+    },
+    "tuning_applied": true,
+    "tuning_result": {
+        "status": "completed",
+        "model_id": "logistic_regression",
+        "accepted_for_final_evaluation": true,
+        "best_params": {
+            "C": 0.5,
+            "class_weight": null
+        }
+    },
+    "artifact_environment": {
+        "schema_version": 1,
+        "python_version": "3.13.3",
+        "python_implementation": "CPython",
+        "platform": "Windows-11-10.0.26200-SP0",
+        "package_versions": {
+            "pandas": "3.0.3",
+            "numpy": "2.5.0",
+            "scikit-learn": "1.9.0",
+            "matplotlib": "3.11.0",
+            "joblib": "1.5.3",
+            "streamlit": "1.58.0",
+            "optuna": "4.9.0"
+        }
+    }
+}

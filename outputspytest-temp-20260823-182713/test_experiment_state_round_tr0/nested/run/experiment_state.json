@@ -1,0 +1,167 @@
+{
+    "dataset_path": "data/sample/holdout_demo.csv",
+    "target_column": "Approved",
+    "user_objective": "Predict whether a loan application should be approved",
+    "run_id": null,
+    "run_directory": null,
+    "state_path": null,
+    "report_path": null,
+    "model_directory": null,
+    "provenance": {},
+    "task_type": "binary_classification",
+    "base_task": "classification",
+    "task_reason": "The target contains two distinct categorical values.",
+    "target_unique_count": 2,
+    "target_missing_count": 0,
+    "target_summary": {
+        "unique_values": 2,
+        "classes": [
+            "No",
+            "Yes"
+        ]
+    },
+    "profile": {
+        "rows": 500,
+        "columns": 7,
+        "feature_count": 6
+    },
+    "quality_issues": [
+        {
+            "severity": "medium",
+            "issue": "Missing values detected"
+        }
+    ],
+    "leakage_warnings": [],
+    "approved_actions": [
+        "drop_possible_id_columns"
+    ],
+    "pending_approvals": [],
+    "experiment_plan": [
+        {
+            "title": "Train baseline models",
+            "status": "completed"
+        }
+    ],
+    "preprocessing_config": {
+        "columns_to_drop": [
+            "Loan_ID"
+        ],
+        "numerical_features": [
+            "ApplicantIncome",
+            "LoanAmount"
+        ],
+        "categorical_features": [
+            "Property_Area"
+        ]
+    },
+    "preprocessing_pipeline_summary": {
+        "status": "created",
+        "numerical_feature_count": 2,
+        "categorical_feature_count": 1
+    },
+    "completed_steps": [
+        "created_experiment_state",
+        "completed_guarded_tuning",
+        "checked_final_holdout",
+        "created_critic_report",
+        "checked_model_persistence",
+        "created_final_report"
+    ],
+    "tool_history": [
+        {
+            "timestamp": "2026-07-24T18:42:59",
+            "tool_name": "final_report_tool",
+            "status": "completed",
+            "message": "Final report created."
+        }
+    ],
+    "model_registry_summary": [
+        {
+            "model_id": "logistic_regression",
+            "display_name": "Logistic Regression"
+        }
+    ],
+    "model_results": [
+        {
+            "model_id": "logistic_regression",
+            "status": "completed",
+            "primary_score": 0.82
+        }
+    ],
+    "training_summary": {
+        "models_completed": 4,
+        "models_failed": 0,
+        "primary_metric": "f1"
+    },
+    "leaderboard": [
+        {
+            "rank": 1,
+            "model_id": "logistic_regression",
+            "primary_score": 0.82
+        }
+    ],
+    "comparison_summary": {
+        "best_overall_model_id": "logistic_regression",
+        "best_useful_model_id": "logistic_regression",
+        "primary_metric": "f1"
+    },
+    "critic_report": {
+        "overall_reliability": "high",
+        "recommendation_decision": "recommend_candidate_model",
+        "can_proceed_to_tuning": true
+    },
+    "model_artifact_summary": {
+        "status": "saved",
+        "model_id": "logistic_regression",
+        "artifact_path": "outputs/models/logistic_regression_pipeline.joblib",
+        "metadata_path": "outputs/models/logistic_regression_metadata.json",
+        "tuning_applied": true
+    },
+    "feature_importance_summary": {
+        "status": "available",
+        "importance_type": "linear_absolute_coefficient",
+        "top_features": [
+            {
+                "rank": 1,
+                "feature": "ApplicantIncome",
+                "importance": 1.25
+            }
+        ]
+    },
+    "validation_summary": {
+        "holdout_used": true,
+        "cross_validation_rows": 400,
+        "holdout_rows": 100
+    },
+    "holdout_result": {
+        "status": "completed",
+        "model_id": "logistic_regression",
+        "primary_metric": "f1",
+        "cv_primary_score": 0.82,
+        "holdout_primary_score": 0.81,
+        "passes_holdout_guardrail": true
+    },
+    "tuning_summary": {
+        "eligible": true,
+        "status": "completed"
+    },
+    "tuning_result": {
+        "status": "completed",
+        "model_id": "logistic_regression",
+        "best_params": {
+            "C": 0.5,
+            "class_weight": null
+        },
+        "accepted_for_final_evaluation": true
+    },
+    "final_report_path": "outputs/reports/final_report.md",
+    "final_report_summary": {
+        "report_type": "final_automl_advisor_report",
+        "recommendation_decision": "recommend_candidate_model"
+    },
+    "warnings": [
+        "Synthetic warning retained for round-trip testing."
+    ],
+    "iteration": 12,
+    "status": "final_report_created"
+}

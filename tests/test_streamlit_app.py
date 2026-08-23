@@ -53,6 +53,11 @@ def test_sample_dataset_populates_an_executable_experiment() -> None:
     assert target.disabled is False
     assert task_type.value == "Auto-detect"
     assert runtime_limit.value == "20 minutes"
+    assert "1 minute" in runtime_limit.options
+    assert "5 minutes" in runtime_limit.options
+    assert "10 minutes" in runtime_limit.options
+    assert "30 minutes" in runtime_limit.options
+    assert "No automatic limit" in runtime_limit.options
     assert objective.value == "Predict whether a loan application will be approved"
     assert objective.disabled is False
     assert app.checkbox[0].label == "Pre-approve dropping likely identifier columns"
